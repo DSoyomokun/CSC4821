@@ -1,0 +1,104 @@
+{
+  "diamondSpawns": [
+    {
+      "distance": 5000,
+      "tier": "white",
+      "challengeId": "white_01"
+    },
+    {
+      "distance": 10000,
+      "tier": "white",
+      "challengeId": "white_02"
+    },
+    {
+      "distance": 15000,
+      "tier": "blue",
+      "challengeId": "blue_01"
+    },
+    {
+      "distance": 20000,
+      "tier": "white",
+      "challengeId": "white_03"
+    },
+    {
+      "distance": 25000,
+      "tier": "black",
+      "challengeId": "black_01"
+    },
+    {
+      "distance": 30000,
+      "tier": "white",
+      "challengeId": "white_04"
+    },
+    {
+      "distance": 35000,
+      "tier": "blue",
+      "challengeId": "blue_02"
+    },
+    {
+      "distance": 40000,
+      "tier": "white",
+      "challengeId": "white_05"
+    },
+    {
+      "distance": 45000,
+      "tier": "blue",
+      "challengeId": "blue_03"
+    },
+    {
+      "distance": 50000,
+      "tier": "black",
+      "challengeId": "black_02"
+    },
+    {
+      "distance": 55000,
+      "tier": "white",
+      "challengeId": "white_06"
+    },
+    {
+      "distance": 60000,
+      "tier": "blue",
+      "challengeId": "blue_04"
+    },
+    {
+      "distance": 65000,
+      "tier": "white",
+      "challengeId": "white_07"
+    },
+    {
+      "distance": 70000,
+      "tier": "blue",
+      "challengeId": "blue_05"
+    },
+    {
+      "distance": 75000,
+      "tier": "black",
+      "challengeId": "black_03"
+    },
+    {
+      "distance": 80000,
+      "tier": "white",
+      "challengeId": "white_08"
+    },
+    {
+      "distance": 85000,
+      "tier": "blue",
+      "challengeId": "blue_06"
+    },
+    {
+      "distance": 90000,
+      "tier": "blue",
+      "challengeId": "blue_07"
+    },
+    {
+      "distance": 95000,
+      "tier": "blue",
+      "challengeId": "blue_08"
+    },
+    {
+      "distance": 100000,
+      "tier": "black",
+      "challengeId": "black_04"
+    }
+  ]
+}

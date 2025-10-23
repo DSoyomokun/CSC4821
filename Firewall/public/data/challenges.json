@@ -1,0 +1,304 @@
+{
+  "challenges": [
+    {
+      "id": "white_01",
+      "tier": "white",
+      "title": "Sum Two Numbers",
+      "description": "Write a function that returns the sum of two numbers.",
+      "example": "sum_two_numbers(3, 5) should return 8",
+      "testCases": [
+        { "input": [3, 5], "expected": 8 },
+        { "input": [0, 0], "expected": 0 },
+        { "input": [-1, 1], "expected": 0 },
+        { "input": [10, 20], "expected": 30 }
+      ],
+      "functionName": "sum_two_numbers",
+      "reward": 1
+    },
+    {
+      "id": "white_02",
+      "tier": "white",
+      "title": "Find Maximum",
+      "description": "Write a function that returns the maximum of two numbers.",
+      "example": "find_max(3, 7) should return 7",
+      "testCases": [
+        { "input": [3, 7], "expected": 7 },
+        { "input": [10, 5], "expected": 10 },
+        { "input": [0, 0], "expected": 0 },
+        { "input": [-5, -2], "expected": -2 }
+      ],
+      "functionName": "find_max",
+      "reward": 1
+    },
+    {
+      "id": "white_03",
+      "tier": "white",
+      "title": "Is Even",
+      "description": "Write a function that returns True if a number is even, False otherwise.",
+      "example": "is_even(4) should return True",
+      "testCases": [
+        { "input": [4], "expected": true },
+        { "input": [5], "expected": false },
+        { "input": [0], "expected": true },
+        { "input": [-2], "expected": true }
+      ],
+      "functionName": "is_even",
+      "reward": 1
+    },
+    {
+      "id": "white_04",
+      "tier": "white",
+      "title": "Count Vowels",
+      "description": "Write a function that counts the number of vowels (a,e,i,o,u) in a string.",
+      "example": "count_vowels('hello') should return 2",
+      "testCases": [
+        { "input": ["hello"], "expected": 2 },
+        { "input": ["aeiou"], "expected": 5 },
+        { "input": ["xyz"], "expected": 0 },
+        { "input": ["HELLO"], "expected": 2 }
+      ],
+      "functionName": "count_vowels",
+      "reward": 1
+    },
+    {
+      "id": "white_05",
+      "tier": "white",
+      "title": "Reverse String",
+      "description": "Write a function that reverses a string.",
+      "example": "reverse_string('hello') should return 'olleh'",
+      "testCases": [
+        { "input": ["hello"], "expected": "olleh" },
+        { "input": ["abc"], "expected": "cba" },
+        { "input": [""], "expected": "" },
+        { "input": ["a"], "expected": "a" }
+      ],
+      "functionName": "reverse_string",
+      "reward": 1
+    },
+    {
+      "id": "white_06",
+      "tier": "white",
+      "title": "List Sum",
+      "description": "Write a function that returns the sum of all numbers in a list.",
+      "example": "list_sum([1, 2, 3]) should return 6",
+      "testCases": [
+        { "input": [[1, 2, 3]], "expected": 6 },
+        { "input": [[]], "expected": 0 },
+        { "input": [[5]], "expected": 5 },
+        { "input": [[-1, 1, 0]], "expected": 0 }
+      ],
+      "functionName": "list_sum",
+      "reward": 1
+    },
+    {
+      "id": "white_07",
+      "tier": "white",
+      "title": "Is Palindrome",
+      "description": "Write a function that checks if a string is a palindrome (reads the same forwards and backwards).",
+      "example": "is_palindrome('racecar') should return True",
+      "testCases": [
+        { "input": ["racecar"], "expected": true },
+        { "input": ["hello"], "expected": false },
+        { "input": ["a"], "expected": true },
+        { "input": [""], "expected": true }
+      ],
+      "functionName": "is_palindrome",
+      "reward": 1
+    },
+    {
+      "id": "white_08",
+      "tier": "white",
+      "title": "Factorial",
+      "description": "Write a function that calculates the factorial of a non-negative integer.",
+      "example": "factorial(5) should return 120",
+      "testCases": [
+        { "input": [5], "expected": 120 },
+        { "input": [0], "expected": 1 },
+        { "input": [1], "expected": 1 },
+        { "input": [3], "expected": 6 }
+      ],
+      "functionName": "factorial",
+      "reward": 1
+    },
+    {
+      "id": "blue_01",
+      "tier": "blue",
+      "title": "Find Duplicates",
+      "description": "Write a function that returns a list of duplicate values in a list.",
+      "example": "find_duplicates([1, 2, 2, 3, 3]) should return [2, 3]",
+      "testCases": [
+        { "input": [[1, 2, 2, 3, 3]], "expected": [2, 3] },
+        { "input": [[1, 2, 3]], "expected": [] },
+        { "input": [[1, 1, 1]], "expected": [1] },
+        { "input": [[]], "expected": [] }
+      ],
+      "functionName": "find_duplicates",
+      "reward": 3
+    },
+    {
+      "id": "blue_02",
+      "tier": "blue",
+      "title": "Merge Sorted Lists",
+      "description": "Write a function that merges two sorted lists into one sorted list.",
+      "example": "merge_sorted([1, 3], [2, 4]) should return [1, 2, 3, 4]",
+      "testCases": [
+        { "input": [[1, 3], [2, 4]], "expected": [1, 2, 3, 4] },
+        { "input": [[1, 2], [3, 4]], "expected": [1, 2, 3, 4] },
+        { "input": [[], [1, 2]], "expected": [1, 2] },
+        { "input": [[1], []], "expected": [1] }
+      ],
+      "functionName": "merge_sorted",
+      "reward": 3
+    },
+    {
+      "id": "blue_03",
+      "tier": "blue",
+      "title": "Binary Search",
+      "description": "Write a function that performs binary search on a sorted list and returns the index of the target, or -1 if not found.",
+      "example": "binary_search([1, 2, 3, 4, 5], 3) should return 2",
+      "testCases": [
+        { "input": [[1, 2, 3, 4, 5], 3], "expected": 2 },
+        { "input": [[1, 2, 3, 4, 5], 1], "expected": 0 },
+        { "input": [[1, 2, 3, 4, 5], 6], "expected": -1 },
+        { "input": [[], 1], "expected": -1 }
+      ],
+      "functionName": "binary_search",
+      "reward": 3
+    },
+    {
+      "id": "blue_04",
+      "tier": "blue",
+      "title": "Longest Common Prefix",
+      "description": "Write a function that finds the longest common prefix among a list of strings.",
+      "example": "longest_prefix(['flower', 'flow', 'flight']) should return 'fl'",
+      "testCases": [
+        { "input": [["flower", "flow", "flight"]], "expected": "fl" },
+        { "input": [["dog", "racecar", "car"]], "expected": "" },
+        { "input": [["test", "test", "test"]], "expected": "test" },
+        { "input": [[]], "expected": "" }
+      ],
+      "functionName": "longest_prefix",
+      "reward": 3
+    },
+    {
+      "id": "blue_05",
+      "tier": "blue",
+      "title": "Two Sum",
+      "description": "Write a function that finds two numbers in a list that add up to a target sum. Return their indices.",
+      "example": "two_sum([2, 7, 11, 15], 9) should return [0, 1]",
+      "testCases": [
+        { "input": [[2, 7, 11, 15], 9], "expected": [0, 1] },
+        { "input": [[3, 2, 4], 6], "expected": [1, 2] },
+        { "input": [[3, 3], 6], "expected": [0, 1] },
+        { "input": [[1, 2, 3], 7], "expected": null }
+      ],
+      "functionName": "two_sum",
+      "reward": 3
+    },
+    {
+      "id": "blue_06",
+      "tier": "blue",
+      "title": "Valid Parentheses",
+      "description": "Write a function that checks if a string of parentheses is valid (properly opened and closed).",
+      "example": "valid_parentheses('()[]{}') should return True",
+      "testCases": [
+        { "input": ["()[]{}"], "expected": true },
+        { "input": ["(]"], "expected": false },
+        { "input": ["([)]"], "expected": false },
+        { "input": ["{[]}"], "expected": true }
+      ],
+      "functionName": "valid_parentheses",
+      "reward": 3
+    },
+    {
+      "id": "blue_07",
+      "tier": "blue",
+      "title": "Fibonacci",
+      "description": "Write a function that returns the nth Fibonacci number (0-indexed).",
+      "example": "fibonacci(6) should return 8",
+      "testCases": [
+        { "input": [6], "expected": 8 },
+        { "input": [0], "expected": 0 },
+        { "input": [1], "expected": 1 },
+        { "input": [10], "expected": 55 }
+      ],
+      "functionName": "fibonacci",
+      "reward": 3
+    },
+    {
+      "id": "blue_08",
+      "tier": "blue",
+      "title": "Find Missing Number",
+      "description": "Write a function that finds the missing number in a list containing n-1 unique numbers from 0 to n.",
+      "example": "find_missing([0, 1, 3]) should return 2",
+      "testCases": [
+        { "input": [[0, 1, 3]], "expected": 2 },
+        { "input": [[0, 1, 2, 3, 4, 6]], "expected": 5 },
+        { "input": [[1]], "expected": 0 },
+        { "input": [[0]], "expected": 1 }
+      ],
+      "functionName": "find_missing",
+      "reward": 3
+    },
+    {
+      "id": "black_01",
+      "tier": "black",
+      "title": "Longest Increasing Subsequence",
+      "description": "Write a function that finds the length of the longest increasing subsequence in a list.",
+      "example": "longest_increasing([10, 9, 2, 5, 3, 7, 101, 18]) should return 4",
+      "testCases": [
+        { "input": [[10, 9, 2, 5, 3, 7, 101, 18]], "expected": 4 },
+        { "input": [[0, 1, 0, 3, 2, 3]], "expected": 4 },
+        { "input": [[7, 7, 7, 7]], "expected": 1 },
+        { "input": [[]], "expected": 0 }
+      ],
+      "functionName": "longest_increasing",
+      "reward": 10
+    },
+    {
+      "id": "black_02",
+      "tier": "black",
+      "title": "Minimum Path Sum",
+      "description": "Write a function that finds the minimum path sum from top-left to bottom-right in a 2D grid (can only move right or down).",
+      "example": "min_path_sum([[1,3,1],[1,5,1],[4,2,1]]) should return 7",
+      "testCases": [
+        { "input": [[[1, 3, 1], [1, 5, 1], [4, 2, 1]]], "expected": 7 },
+        { "input": [[[1, 2], [1, 1]]], "expected": 3 },
+        { "input": [[[1]]], "expected": 1 },
+        { "input": [[[1, 2, 3], [4, 5, 6]]], "expected": 12 }
+      ],
+      "functionName": "min_path_sum",
+      "reward": 10
+    },
+    {
+      "id": "black_03",
+      "tier": "black",
+      "title": "Word Break",
+      "description": "Write a function that determines if a string can be segmented into space-separated words from a dictionary.",
+      "example": "word_break('leetcode', ['leet', 'code']) should return True",
+      "testCases": [
+        { "input": ["leetcode", ["leet", "code"]], "expected": true },
+        { "input": ["applepenapple", ["apple", "pen"]], "expected": true },
+        { "input": ["catsandog", ["cats", "dog", "sand", "and", "cat"]], "expected": false },
+        { "input": ["", ["a"]], "expected": true }
+      ],
+      "functionName": "word_break",
+      "reward": 10
+    },
+    {
+      "id": "black_04",
+      "tier": "black",
+      "title": "Regular Expression Matching",
+      "description": "Write a simplified regex matcher that supports '.' (any character) and '*' (zero or more of previous character).",
+      "example": "regex_match('aa', 'a*') should return True",
+      "testCases": [
+        { "input": ["aa", "a*"], "expected": true },
+        { "input": ["ab", ".*"], "expected": true },
+        { "input": ["aab", "c*a*b"], "expected": true },
+        { "input": ["mississippi", "mis*is*p*."], "expected": false }
+      ],
+      "functionName": "regex_match",
+      "reward": 10
+    }
+  ]
+}

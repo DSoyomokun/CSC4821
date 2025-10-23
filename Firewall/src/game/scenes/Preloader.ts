@@ -34,6 +34,11 @@ export class Preloader extends Scene
 
         this.load.image('logo', 'logo.png');
         this.load.image('star', 'star.png');
+
+        //  Load game data
+        this.load.setPath('data');
+        this.load.json('spawn_patterns', 'spawn_patterns.json');
+        this.load.json('challenges', 'challenges.json');
     }
 
     create ()

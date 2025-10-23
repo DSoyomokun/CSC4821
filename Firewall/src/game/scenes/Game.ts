@@ -2,6 +2,7 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 import { RunnerPlayer } from '../objects/RunnerPlayer';
 import { Laser, LaserHeight } from '../objects/Laser';
+import { DiamondSpawner } from '../objects/DiamondSpawner';
 
 export class Game extends Scene
 {
@@ -9,6 +10,7 @@ export class Game extends Scene
     player!: RunnerPlayer;
     ground!: Phaser.GameObjects.Rectangle;
     lasers: Laser[] = [];
+    diamondSpawner!: DiamondSpawner;
 
     // Game state
     private scrollSpeed: number = 300; // pixels per second
@@ -50,6 +52,9 @@ export class Game extends Scene
 
         // Create collision group for lasers
         this.collisionGroup = this.physics.add.group();
+
+        // Create diamond spawner
+        this.diamondSpawner = new DiamondSpawner(this, this.GROUND_Y, this.scrollSpeed);
 
         // Setup UI
         this.setupUI();
@@ -103,6 +108,9 @@ export class Game extends Scene
 
         // Update lasers
         this.updateLasers(delta);
+
+        // Update diamond spawner
+        this.diamondSpawner.update(delta, this.distance);
 
         // Check collisions
         this.checkCollisions();
@@ -169,6 +177,15 @@ export class Game extends Scene
             undefined,
             this
         );
+
+        // Check overlap between player and diamonds
+        this.physics.overlap(
+            this.player.getSprite(),
+            this.diamondSpawner.diamondsGroup,
+            this.handleDiamondCollision,
+            undefined,
+            this
+        );
     }
 
     private handleLaserCollision(): void {
@@ -180,6 +197,49 @@ export class Game extends Scene
         // Increment score as placeholder
         this.score += 1;
         this.scoreText.setText(`Score: ${this.score}`);
+    }
+
+    private handleDiamondCollision(_player: any, diamondSprite: any): void {
+        const sprite = diamondSprite as Phaser.Physics.Arcade.Sprite;
+        const tier = sprite.getData('tier');
+        const challengeId = sprite.getData('challengeId');
+
+        console.log(`Diamond collected! Tier: ${tier}, Challenge: ${challengeId}`);
+
+        // Remove the diamond
+        this.diamondSpawner.removeDiamond(sprite);
+
+        // Pause the game
+        this.scene.pause();
+
+        // Show a simple message (will be replaced with challenge overlay later)
+        const pauseText = this.add.text(960, 540,
+            `GAME PAUSED\n\nCollected ${tier.toUpperCase()} Diamond!\nChallenge: ${challengeId}\n\nPress SPACE to resume`,
+            {
+                fontFamily: 'Arial',
+                fontSize: '32px',
+                color: '#ffffff',
+                backgroundColor: '#000000',
+                padding: { x: 20, y: 20 },
+                align: 'center'
+            }
+        ).setOrigin(0.5).setDepth(5000);
+
+        // Add space key to resume
+        const resumeHandler = (event: KeyboardEvent) => {
+            if (event.code === 'Space') {
+                pauseText.destroy();
+                this.scene.resume();
+
+                // Add points based on tier (placeholder)
+                const points = tier === 'white' ? 1 : tier === 'blue' ? 3 : 10;
+                this.score += points;
+                this.scoreText.setText(`Score: ${this.score}`);
+
+                window.removeEventListener('keydown', resumeHandler);
+            }
+        };
+        window.addEventListener('keydown', resumeHandler);
     }
 
     changeScene ()
