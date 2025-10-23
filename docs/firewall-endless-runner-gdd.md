@@ -12,7 +12,7 @@
 
 ### Core Concept
 
-**Firewall** is a 2D endless runner where players control a nerdy hacker sprinting through an infinite digital corridor, dodging laser security systems and collecting valuable data diamonds. The unique twist: each diamond collected triggers a real coding challenge that must be solved to secure the score. Fail to dodge a laser, and you'll face a quick-time event to disarm the alarm—or lose everything. It's Temple Run meets LeetCode in a high-stakes cybersecurity heist.
+**Firewall** is a 2D endless runner where players control a nerdy hacker sprinting through an infinite digital corridor, dodging laser security systems and collecting valuable data diamonds. The unique twist: each diamond collected triggers a real coding challenge that must be solved to secure the score. Fail to dodge a laser, and you'll face a quick-time event to disarm the alarm—or lose everything. It's Jetpack Joyride meets LeetCode in a high-stakes physical + cybersecurity heist.
 
 ### Target Audience
 

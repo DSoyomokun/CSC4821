@@ -19,6 +19,30 @@ This template has been updated for:
 
 [Node.js](https://nodejs.org) is required to install dependencies and run scripts via `npm`.
 
+## Quick Start
+
+### Option 1: Use the alias (recommended)
+
+Add this alias to your `~/.zshrc`:
+
+```bash
+alias firewall="cd /Users/dstatic/Downloads/CSC4821/Firewall && npm install && npm run dev"
+```
+
+Then restart your terminal or run `source ~/.zshrc`, and simply type:
+
+```bash
+firewall
+```
+
+### Option 2: One-line command
+
+Run this from the project root:
+
+```bash
+cd Firewall && npm install && npm run dev
+```
+
 ## Available Commands
 
 | Command | Description |

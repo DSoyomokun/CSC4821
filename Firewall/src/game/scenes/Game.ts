@@ -1,11 +1,32 @@
 import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
+import { RunnerPlayer } from '../objects/RunnerPlayer';
+import { Laser, LaserHeight } from '../objects/Laser';
 
 export class Game extends Scene
 {
     camera: Phaser.Cameras.Scene2D.Camera;
-    background: Phaser.GameObjects.Image;
-    gameText: Phaser.GameObjects.Text;
+    player!: RunnerPlayer;
+    ground!: Phaser.GameObjects.Rectangle;
+    lasers: Laser[] = [];
+
+    // Game state
+    private scrollSpeed: number = 300; // pixels per second
+    private distance: number = 0;
+    private score: number = 0;
+    private readonly GROUND_Y = 900;
+
+    // Obstacle spawning
+    private obstacleSpawnTimer: number = 0;
+    private obstacleSpawnInterval: number = 2000; // milliseconds
+
+    // UI
+    private scoreText!: Phaser.GameObjects.Text;
+    private distanceText!: Phaser.GameObjects.Text;
+    private helpText!: Phaser.GameObjects.Text;
+
+    // Collision
+    private collisionGroup!: Phaser.Physics.Arcade.Group;
 
     constructor ()
     {
@@ -15,18 +36,150 @@ export class Game extends Scene
     create ()
     {
         this.camera = this.cameras.main;
-        this.camera.setBackgroundColor(0x00ff00);
+        this.camera.setBackgroundColor(0x0a0a1a);
 
-        this.background = this.add.image(512, 384, 'background');
-        this.background.setAlpha(0.5);
+        // Create ground
+        this.ground = this.add.rectangle(960, this.GROUND_Y, 1920, 4, 0x4a4a4a);
+        this.physics.add.existing(this.ground, true); // Static body
 
-        this.gameText = this.add.text(512, 384, 'Make something fun!\nand share it with us:\nsupport@phaser.io', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(100);
+        // Create player
+        this.player = new RunnerPlayer(this, this.GROUND_Y);
+
+        // Enable collision between player and ground
+        this.physics.add.collider(this.player.getSprite(), this.ground);
+
+        // Create collision group for lasers
+        this.collisionGroup = this.physics.add.group();
+
+        // Setup UI
+        this.setupUI();
+
+        // Reset game state
+        this.distance = 0;
+        this.score = 0;
+        this.obstacleSpawnTimer = 0;
+        this.lasers = [];
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private setupUI(): void {
+        this.scoreText = this.add.text(16, 16, 'Score: 0', {
+            fontFamily: 'Arial',
+            fontSize: '32px',
+            color: '#ffffff'
+        }).setDepth(1000);
+
+        this.distanceText = this.add.text(16, 56, 'Distance: 0m', {
+            fontFamily: 'Arial',
+            fontSize: '32px',
+            color: '#ffffff'
+        }).setDepth(1000);
+
+        this.helpText = this.add.text(960, 100, 'FIREWALL - Endless Runner\n\nSPACE/W/↑ - Jump\nSHIFT/S/↓ - Slide\n\nWatch for YELLOW warnings!\nJump over LOW lasers, Slide under HIGH lasers', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            color: '#ffffff',
+            align: 'center'
+        }).setOrigin(0.5).setDepth(1000);
+
+        // Hide help text after 5 seconds
+        this.time.delayedCall(5000, () => {
+            this.helpText.setAlpha(0);
+        });
+    }
+
+    update(_time: number, delta: number): void
+    {
+        // Update player
+        this.player.update(delta);
+
+        // Update distance traveled
+        this.distance += (this.scrollSpeed * delta) / 1000;
+        this.distanceText.setText(`Distance: ${Math.floor(this.distance)}m`);
+
+        // Update obstacle spawning
+        this.updateObstacleSpawning(delta);
+
+        // Update lasers
+        this.updateLasers(delta);
+
+        // Check collisions
+        this.checkCollisions();
+    }
+
+    private updateObstacleSpawning(delta: number): void {
+        this.obstacleSpawnTimer += delta;
+
+        if (this.obstacleSpawnTimer >= this.obstacleSpawnInterval) {
+            this.spawnLaser();
+            this.obstacleSpawnTimer = 0;
+
+            // Gradually increase difficulty
+            if (this.obstacleSpawnInterval > 1000) {
+                this.obstacleSpawnInterval -= 50; // Spawn more frequently over time
+            }
+        }
+    }
+
+    private spawnLaser(): void {
+        // Randomly choose laser height
+        const rand = Math.random();
+        let height: LaserHeight;
+
+        if (rand < 0.4) {
+            height = 'ground'; // 40% - Jump over
+        } else if (rand < 0.7) {
+            height = 'high';   // 30% - Slide under
+        } else {
+            height = 'middle'; // 30% - Either jump or slide
+        }
+
+        const x = 2000; // Spawn off-screen to the right
+
+        const laser = new Laser(this, x, this.GROUND_Y, height, this.scrollSpeed);
+        this.lasers.push(laser);
+
+        // Add to collision group
+        this.collisionGroup.add(laser.sprite);
+
+        console.log(`Spawned ${height} laser at x=${x}`);
+    }
+
+    private updateLasers(delta: number): void {
+        // Update all lasers and remove off-screen ones
+        for (let i = this.lasers.length - 1; i >= 0; i--) {
+            const laser = this.lasers[i];
+            laser.update(delta);
+
+            if (laser.isOffScreen()) {
+                this.collisionGroup.remove(laser.sprite);
+                laser.destroy();
+                this.lasers.splice(i, 1);
+            }
+        }
+    }
+
+    private checkCollisions(): void {
+        // Check overlap between player and lasers
+        this.physics.overlap(
+            this.player.getSprite(),
+            this.collisionGroup,
+            this.handleLaserCollision,
+            undefined,
+            this
+        );
+    }
+
+    private handleLaserCollision(): void {
+        console.log('COLLISION DETECTED!');
+        // TODO: Trigger QTE system
+        // For now, just log and continue
+        // In Phase 2, this will pause game and show QTE overlay
+
+        // Increment score as placeholder
+        this.score += 1;
+        this.scoreText.setText(`Score: ${this.score}`);
     }
 
     changeScene ()
