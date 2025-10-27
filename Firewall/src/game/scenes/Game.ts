@@ -15,15 +15,13 @@ export class Game extends Scene
     // Game state
     private scrollSpeed: number = 300; // pixels per second
     private distance: number = 0;
-    private score: number = 0;
     private readonly GROUND_Y = 900;
 
-    // Obstacle spawning
-    private obstacleSpawnTimer: number = 0;
-    private obstacleSpawnInterval: number = 2000; // milliseconds
+    // Laser spawning
+    private laserSpawnTimer: number = 0;
+    private laserSpawnInterval: number = 120000; // milliseconds
 
     // UI
-    private scoreText!: Phaser.GameObjects.Text;
     private distanceText!: Phaser.GameObjects.Text;
     private helpText!: Phaser.GameObjects.Text;
 
@@ -61,21 +59,14 @@ export class Game extends Scene
 
         // Reset game state
         this.distance = 0;
-        this.score = 0;
-        this.obstacleSpawnTimer = 0;
+        this.laserSpawnTimer = 0;
         this.lasers = [];
 
         EventBus.emit('current-scene-ready', this);
     }
 
     private setupUI(): void {
-        this.scoreText = this.add.text(16, 16, 'Score: 0', {
-            fontFamily: 'Arial',
-            fontSize: '32px',
-            color: '#ffffff'
-        }).setDepth(1000);
-
-        this.distanceText = this.add.text(16, 56, 'Distance: 0m', {
+        this.distanceText = this.add.text(16, 16, 'Distance: 0m', {
             fontFamily: 'Arial',
             fontSize: '32px',
             color: '#ffffff'
@@ -103,8 +94,8 @@ export class Game extends Scene
         this.distance += (this.scrollSpeed * delta) / 1000;
         this.distanceText.setText(`Distance: ${Math.floor(this.distance)}m`);
 
-        // Update obstacle spawning
-        this.updateObstacleSpawning(delta);
+        // Update laser spawning
+        this.updatelaserSpawning(delta);
 
         // Update lasers
         this.updateLasers(delta);
@@ -116,16 +107,16 @@ export class Game extends Scene
         this.checkCollisions();
     }
 
-    private updateObstacleSpawning(delta: number): void {
-        this.obstacleSpawnTimer += delta;
+    private updatelaserSpawning(delta: number): void {
+        this.laserSpawnTimer += delta;
 
-        if (this.obstacleSpawnTimer >= this.obstacleSpawnInterval) {
+        if (this.laserSpawnTimer >= this.laserSpawnInterval) {
             this.spawnLaser();
-            this.obstacleSpawnTimer = 0;
+            this.laserSpawnTimer = 0;
 
             // Gradually increase difficulty
-            if (this.obstacleSpawnInterval > 1000) {
-                this.obstacleSpawnInterval -= 50; // Spawn more frequently over time
+            if (this.laserSpawnInterval > 1000) {
+                this.laserSpawnInterval -= 50; // Spawn more frequently over time
             }
         }
     }
@@ -138,7 +129,7 @@ export class Game extends Scene
         if (rand < 0.4) {
             height = 'ground'; // 40% - Jump over
         } else if (rand < 0.7) {
-            height = 'high';   // 30% - Slide under
+            height = 'high';   // 30% - Slide unokder
         } else {
             height = 'middle'; // 30% - Either jump or slide
         }
@@ -193,13 +184,11 @@ export class Game extends Scene
         // TODO: Trigger QTE system
         // For now, just log and continue
         // In Phase 2, this will pause game and show QTE overlay
-
-        // Increment score as placeholder
-        this.score += 1;
-        this.scoreText.setText(`Score: ${this.score}`);
     }
 
     private handleDiamondCollision(_player: any, diamondSprite: any): void {
+        console.log('handleDiamondCollision called!', _player, diamondSprite);
+
         const sprite = diamondSprite as Phaser.Physics.Arcade.Sprite;
         const tier = sprite.getData('tier');
         const challengeId = sprite.getData('challengeId');
@@ -230,11 +219,6 @@ export class Game extends Scene
             if (event.code === 'Space') {
                 pauseText.destroy();
                 this.scene.resume();
-
-                // Add points based on tier (placeholder)
-                const points = tier === 'white' ? 1 : tier === 'blue' ? 3 : 10;
-                this.score += points;
-                this.scoreText.setText(`Score: ${this.score}`);
 
                 window.removeEventListener('keydown', resumeHandler);
             }

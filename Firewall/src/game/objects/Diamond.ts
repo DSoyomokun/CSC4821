@@ -50,6 +50,10 @@ export class Diamond {
             body.setAllowGravity(false);
             body.setImmovable(true);
             body.setSize(30, 30); // Collision box size
+            body.setEnable(true); // Explicitly enable collision
+            console.log(`Diamond physics body enabled: size=${body.width}x${body.height}`);
+        } else {
+            console.error('Diamond sprite has no physics body!');
         }
 
         // Store data on sprite for easy access during collision
