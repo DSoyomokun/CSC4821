@@ -19,7 +19,7 @@ export class Game extends Scene
 
     // Laser spawning
     private laserSpawnTimer: number = 0;
-    private laserSpawnInterval: number = 120000; // milliseconds
+    private laserSpawnInterval: number = 1200; // milliseconds
 
     // UI
     private distanceText!: Phaser.GameObjects.Text;
@@ -27,6 +27,7 @@ export class Game extends Scene
 
     // Collision
     private collisionGroup!: Phaser.Physics.Arcade.Group;
+    private isDiamondPaused: boolean = false;
 
     constructor ()
     {
@@ -187,6 +188,12 @@ export class Game extends Scene
     }
 
     private handleDiamondCollision(_player: any, diamondSprite: any): void {
+        // Prevent multiple pause triggers from the same collision
+        if (this.isDiamondPaused) {
+            return;
+        }
+
+        this.isDiamondPaused = true;
         console.log('handleDiamondCollision called!', _player, diamondSprite);
 
         const sprite = diamondSprite as Phaser.Physics.Arcade.Sprite;
@@ -219,6 +226,7 @@ export class Game extends Scene
             if (event.code === 'Space') {
                 pauseText.destroy();
                 this.scene.resume();
+                this.isDiamondPaused = false;
 
                 window.removeEventListener('keydown', resumeHandler);
             }
