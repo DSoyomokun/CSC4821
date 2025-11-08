@@ -39,22 +39,21 @@ export class Diamond {
         const color = this.getTierColor();
         this.rectangle = scene.add.rectangle(this.x, this.y, 30, 30, color);
 
-        // Create invisible physics sprite for collision
-        this.sprite = scene.physics.add.sprite(this.x, this.y, '__MISSING');
-        this.sprite.setVisible(false);
-        this.sprite.setAlpha(0);
+        // Create invisible rectangle for physics (using static body to avoid gravity)
+        const physicsRect = scene.add.rectangle(this.x, this.y, 30, 30);
+        physicsRect.setVisible(false);
+        scene.physics.add.existing(physicsRect, false); // false = dynamic body
 
-        // Configure physics
-        if (this.sprite.body) {
-            const body = this.sprite.body as Phaser.Physics.Arcade.Body;
-            body.setAllowGravity(false);
-            body.setImmovable(true);
-            body.setSize(30, 30); // Collision box size
-            body.setEnable(true); // Explicitly enable collision
-            console.log(`Diamond physics body enabled: size=${body.width}x${body.height}`);
-        } else {
-            console.error('Diamond sprite has no physics body!');
-        }
+        this.sprite = physicsRect as unknown as Phaser.Physics.Arcade.Sprite;
+
+        // Configure physics - disable gravity completely
+        const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+        body.setAllowGravity(false);
+        body.setImmovable(true);
+        body.setSize(30, 30);
+        body.offset.y = -30; // Adjust offset since origin is center by default
+
+        console.log(`Diamond physics body: gravity=${body.allowGravity}, size=${body.width}x${body.height}, position=${body.x},${body.y}`);
 
         // Store data on sprite for easy access during collision
         this.sprite.setData('tier', tier);
@@ -68,8 +67,15 @@ export class Diamond {
         const scrollAmount = this.scrollSpeed * (delta / 1000);
         this.x -= scrollAmount;
 
-        // Update positions (no floating animation)
-        this.sprite.setPosition(this.x, this.y);
+        // Update positions manually (physics body won't fall if gravity is disabled)
+        this.sprite.x = this.x;
+        this.sprite.y = this.y;
+
+        // Also force velocity to 0 to prevent any drift
+        const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+        body.velocity.x = 0;
+        body.velocity.y = 0;
+
         this.rectangle.setPosition(this.x, this.y);
     }
 

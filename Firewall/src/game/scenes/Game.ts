@@ -19,7 +19,7 @@ export class Game extends Scene
 
     // Laser spawning
     private laserSpawnTimer: number = 0;
-    private laserSpawnInterval: number = 1200; // milliseconds
+    private laserSpawnInterval: number = 120000; // milliseconds
 
     // UI
     private distanceText!: Phaser.GameObjects.Text;
@@ -27,6 +27,8 @@ export class Game extends Scene
 
     // Collision
     private collisionGroup!: Phaser.Physics.Arcade.Group;
+    private laserCollider!: Phaser.Physics.Arcade.Collider;
+    private diamondCollider!: Phaser.Physics.Arcade.Collider;
     private isDiamondPaused: boolean = false;
 
     constructor ()
@@ -38,6 +40,9 @@ export class Game extends Scene
     {
         this.camera = this.cameras.main;
         this.camera.setBackgroundColor(0x0a0a1a);
+
+        // DEBUG: Enable physics debug to see collision bodies
+        this.physics.world.createDebugGraphic();
 
         // Create ground
         this.ground = this.add.rectangle(960, this.GROUND_Y, 1920, 4, 0x4a4a4a);
@@ -54,6 +59,23 @@ export class Game extends Scene
 
         // Create diamond spawner
         this.diamondSpawner = new DiamondSpawner(this, this.GROUND_Y, this.scrollSpeed);
+
+        // Setup collisions ONCE (not every frame!)
+        this.laserCollider = this.physics.add.overlap(
+            this.player.getSprite(),
+            this.collisionGroup,
+            this.handleLaserCollision,
+            undefined,
+            this
+        );
+
+        this.diamondCollider = this.physics.add.overlap(
+            this.player.getSprite(),
+            this.diamondSpawner.diamondsGroup,
+            this.handleDiamondCollision,
+            undefined,
+            this
+        );
 
         // Setup UI
         this.setupUI();
@@ -103,9 +125,6 @@ export class Game extends Scene
 
         // Update diamond spawner
         this.diamondSpawner.update(delta, this.distance);
-
-        // Check collisions
-        this.checkCollisions();
     }
 
     private updatelaserSpawning(delta: number): void {
@@ -158,26 +177,6 @@ export class Game extends Scene
                 this.lasers.splice(i, 1);
             }
         }
-    }
-
-    private checkCollisions(): void {
-        // Check overlap between player and lasers
-        this.physics.overlap(
-            this.player.getSprite(),
-            this.collisionGroup,
-            this.handleLaserCollision,
-            undefined,
-            this
-        );
-
-        // Check overlap between player and diamonds
-        this.physics.overlap(
-            this.player.getSprite(),
-            this.diamondSpawner.diamondsGroup,
-            this.handleDiamondCollision,
-            undefined,
-            this
-        );
     }
 
     private handleLaserCollision(): void {
