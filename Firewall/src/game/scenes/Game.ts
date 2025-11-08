@@ -41,9 +41,6 @@ export class Game extends Scene
         this.camera = this.cameras.main;
         this.camera.setBackgroundColor(0x0a0a1a);
 
-        // DEBUG: Enable physics debug to see collision bodies
-        this.physics.world.createDebugGraphic();
-
         // Create ground
         this.ground = this.add.rectangle(960, this.GROUND_Y, 1920, 4, 0x4a4a4a);
         this.physics.add.existing(this.ground, true); // Static body
@@ -207,30 +204,19 @@ export class Game extends Scene
         // Pause the game
         this.scene.pause();
 
-        // Show a simple message (will be replaced with challenge overlay later)
-        const pauseText = this.add.text(960, 540,
-            `GAME PAUSED\n\nCollected ${tier.toUpperCase()} Diamond!\nChallenge: ${challengeId}\n\nPress SPACE to resume`,
-            {
-                fontFamily: 'Arial',
-                fontSize: '32px',
-                color: '#ffffff',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 20 },
-                align: 'center'
-            }
-        ).setOrigin(0.5).setDepth(5000);
+        // Load the problem data
+        const problem = this.cache.json.get('problem_contains_duplicate');
 
-        // Add space key to resume
-        const resumeHandler = (event: KeyboardEvent) => {
-            if (event.code === 'Space') {
-                pauseText.destroy();
-                this.scene.resume();
-                this.isDiamondPaused = false;
+        // Launch LeetCode Challenge Scene
+        this.scene.launch('LeetCodeChallenge', {
+            problem: problem,
+            distanceTraveled: this.distance
+        });
 
-                window.removeEventListener('keydown', resumeHandler);
-            }
-        };
-        window.addEventListener('keydown', resumeHandler);
+        // Listen for when challenge scene closes to reset pause state
+        this.scene.get('LeetCodeChallenge').events.once('shutdown', () => {
+            this.isDiamondPaused = false;
+        });
     }
 
     changeScene ()

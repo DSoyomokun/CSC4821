@@ -1,0 +1,368 @@
+import { Scene } from 'phaser';
+import { LeetCodeProblem } from '../types/LeetCodeTypes';
+import * as monaco from 'monaco-editor';
+
+export class LeetCodeChallenge extends Scene {
+    private problem!: LeetCodeProblem;
+    private distanceTraveled!: number;
+    private editor!: monaco.editor.IStandaloneCodeEditor;
+    private editorContainer!: HTMLElement;
+
+    constructor() {
+        super('LeetCodeChallenge');
+    }
+
+    create(data: { problem: LeetCodeProblem, distanceTraveled: number }) {
+        this.problem = data.problem;
+        this.distanceTraveled = data.distanceTraveled;
+
+        console.log('LeetCodeChallenge launched with problem:', this.problem);
+
+        // Create semi-transparent backdrop
+        this.createBackdrop();
+
+        // Create UI layout
+        this.createChallengeUI();
+
+        // Initialize Monaco editor
+        this.initializeMonacoEditor();
+    }
+
+    private createBackdrop() {
+        const backdrop = this.add.rectangle(
+            0, 0,
+            this.scale.width,
+            this.scale.height,
+            0x000000, 0.90
+        );
+        backdrop.setOrigin(0, 0);
+        backdrop.setInteractive(); // Block input to game scene
+    }
+
+    private createChallengeUI() {
+        const centerX = this.scale.width / 2;
+        const centerY = this.scale.height / 2;
+
+        // Main panel
+        const panelWidth = this.scale.width - 100;
+        const panelHeight = this.scale.height - 100;
+
+        const panel = this.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x1e1e1e);
+        panel.setStrokeStyle(3, 0x4CAF50);
+
+        // Split into two columns: left = problem description, right = code editor
+        const leftX = centerX - panelWidth / 4;
+        const rightX = centerX + panelWidth / 4;
+        const columnWidth = panelWidth / 2 - 40;
+
+        // === LEFT COLUMN: Problem Description ===
+        this.createProblemPanel(leftX, centerY, columnWidth, panelHeight - 40);
+
+        // === RIGHT COLUMN: Code Editor ===
+        this.createEditorPanel(rightX, centerY, columnWidth, panelHeight - 40);
+
+        // === CONTROL BUTTONS AT BOTTOM ===
+        this.createControlButtons(centerX, centerY + panelHeight / 2 - 50);
+    }
+
+    private createProblemPanel(x: number, y: number, width: number, height: number) {
+        const topY = y - height / 2 + 20;
+
+        // Title
+        const title = this.add.text(x, topY,
+            `${this.problem.number}. ${this.problem.title}`, {
+            fontSize: '24px',
+            color: '#4CAF50',
+            fontStyle: 'bold',
+            wordWrap: { width: width - 20 }
+        });
+        title.setOrigin(0.5, 0);
+
+        // Difficulty and Topic badges
+        const badgeY = topY + title.height + 15;
+        const difficultyColor = this.getDifficultyColor(this.problem.difficulty);
+        const difficultyBadge = this.add.text(x - 60, badgeY,
+            `${this.problem.leetcodeDifficulty}`, {
+            fontSize: '14px',
+            color: difficultyColor,
+            backgroundColor: '#2d2d30',
+            padding: { x: 8, y: 4 }
+        });
+        difficultyBadge.setOrigin(0.5, 0);
+
+        const topicBadge = this.add.text(x + 60, badgeY,
+            this.problem.topic, {
+            fontSize: '14px',
+            color: '#888',
+            backgroundColor: '#2d2d30',
+            padding: { x: 8, y: 4 }
+        });
+        topicBadge.setOrigin(0.5, 0);
+
+        // Description
+        let contentY = badgeY + 40;
+        const description = this.add.text(x - width / 2 + 20, contentY,
+            this.problem.description, {
+            fontSize: '16px',
+            color: '#d4d4d4',
+            wordWrap: { width: width - 40 },
+            lineSpacing: 5
+        });
+        description.setOrigin(0, 0);
+
+        // Examples
+        contentY += description.height + 20;
+        const examplesTitle = this.add.text(x - width / 2 + 20, contentY,
+            'Examples:', {
+            fontSize: '18px',
+            color: '#4CAF50',
+            fontStyle: 'bold'
+        });
+        examplesTitle.setOrigin(0, 0);
+
+        contentY += examplesTitle.height + 10;
+        this.problem.examples.forEach((example, index) => {
+            const exampleText = this.add.text(x - width / 2 + 30, contentY,
+                `Example ${index + 1}:\n` +
+                `Input: ${example.input}\n` +
+                `Output: ${example.output}` +
+                (example.explanation ? `\nExplanation: ${example.explanation}` : ''), {
+                fontSize: '14px',
+                color: '#d4d4d4',
+                fontFamily: 'Courier New, monospace',
+                backgroundColor: '#2d2d30',
+                padding: { x: 8, y: 8 },
+                wordWrap: { width: width - 60 }
+            });
+            exampleText.setOrigin(0, 0);
+            contentY += exampleText.height + 10;
+        });
+
+        // Constraints
+        contentY += 10;
+        const constraintsTitle = this.add.text(x - width / 2 + 20, contentY,
+            'Constraints:', {
+            fontSize: '18px',
+            color: '#4CAF50',
+            fontStyle: 'bold'
+        });
+        constraintsTitle.setOrigin(0, 0);
+
+        contentY += constraintsTitle.height + 10;
+        const constraintsText = this.add.text(x - width / 2 + 30, contentY,
+            this.problem.constraints.map(c => `• ${c}`).join('\n'), {
+            fontSize: '13px',
+            color: '#888',
+            fontFamily: 'Courier New, monospace',
+            wordWrap: { width: width - 60 }
+        });
+        constraintsText.setOrigin(0, 0);
+    }
+
+    private createEditorPanel(x: number, y: number, width: number, height: number) {
+        const topY = y - height / 2 + 20;
+
+        // Editor title
+        const editorTitle = this.add.text(x, topY,
+            'Code Editor', {
+            fontSize: '18px',
+            color: '#4CAF50',
+            fontStyle: 'bold'
+        });
+        editorTitle.setOrigin(0.5, 0);
+
+        // Language badge
+        const langBadge = this.add.text(x - width / 2 + 20, topY,
+            'JavaScript', {
+            fontSize: '14px',
+            color: '#FFC107',
+            backgroundColor: '#2d2d30',
+            padding: { x: 8, y: 4 }
+        });
+        langBadge.setOrigin(0, 0);
+
+        // Monaco editor will be mounted here as DOM element
+        // We'll create the DOM container but not add visual elements in Phaser
+    }
+
+    private initializeMonacoEditor() {
+        // Create DOM element for Monaco editor
+        this.editorContainer = document.createElement('div');
+        this.editorContainer.id = 'monaco-editor-container';
+        this.editorContainer.style.position = 'absolute';
+
+        // Position on right side of screen
+        const panelWidth = this.scale.width - 100;
+        const panelHeight = this.scale.height - 100;
+        const columnWidth = panelWidth / 2 - 40;
+
+        const leftOffset = (this.scale.width - panelWidth) / 2 + panelWidth / 2 + 20;
+        const topOffset = (this.scale.height - panelHeight) / 2 + 80;
+
+        this.editorContainer.style.left = `${leftOffset}px`;
+        this.editorContainer.style.top = `${topOffset}px`;
+        this.editorContainer.style.width = `${columnWidth - 40}px`;
+        this.editorContainer.style.height = `${panelHeight - 200}px`;
+        this.editorContainer.style.border = '2px solid #3e3e42';
+
+        document.body.appendChild(this.editorContainer);
+
+        // Initialize Monaco editor
+        this.editor = monaco.editor.create(this.editorContainer, {
+            value: this.problem.starterCode || this.getDefaultStarterCode(),
+            language: 'javascript',
+            theme: 'vs-dark',
+            automaticLayout: true,
+            minimap: { enabled: false },
+            fontSize: 14,
+            lineNumbers: 'on',
+            scrollBeyondLastLine: false,
+            wordWrap: 'on',
+            tabSize: 2,
+            renderWhitespace: 'selection'
+        });
+
+        console.log('Monaco editor initialized');
+    }
+
+    private getDefaultStarterCode(): string {
+        return `var ${this.problem.functionName} = function(${this.problem.parameters.join(', ')}) {\n    // Write your solution here\n    \n};\n`;
+    }
+
+    private createControlButtons(x: number, y: number) {
+        // Run Tests button
+        const runButton = this.createButton(x - 300, y, 'Run Tests', 0x2196F3);
+        runButton.on('pointerdown', () => this.runTests());
+
+        // Submit button
+        const submitButton = this.createButton(x - 100, y, 'Submit', 0x4CAF50);
+        submitButton.on('pointerdown', () => this.submitSolution());
+
+        // Skip button
+        const skipButton = this.createButton(x + 100, y, 'Skip', 0xf44336);
+        skipButton.on('pointerdown', () => this.skipProblem());
+
+        // Close button
+        const closeButton = this.createButton(x + 300, y, 'Close (ESC)', 0x666666);
+        closeButton.on('pointerdown', () => this.closeChallenge());
+
+        // Setup keyboard shortcuts
+        this.input.keyboard?.on('keydown-ESC', () => {
+            this.closeChallenge();
+        });
+    }
+
+    private createButton(x: number, y: number, text: string, color: number): Phaser.GameObjects.Container {
+        const button = this.add.container(x, y);
+
+        const bg = this.add.rectangle(0, 0, 150, 45, color);
+        bg.setInteractive({ useHandCursor: true });
+        button.add(bg);
+
+        const label = this.add.text(0, 0, text, {
+            fontSize: '14px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        label.setOrigin(0.5);
+        button.add(label);
+
+        // Hover effect
+        bg.on('pointerover', () => {
+            bg.setFillStyle(color + 0x333333);
+        });
+        bg.on('pointerout', () => {
+            bg.setFillStyle(color);
+        });
+
+        return button;
+    }
+
+    private runTests() {
+        const code = this.editor.getValue();
+        console.log('Running tests with code:', code);
+
+        // TODO: Implement test runner
+        // For now, just log
+        alert('Test runner not yet implemented. Code logged to console.');
+    }
+
+    private submitSolution() {
+        const code = this.editor.getValue();
+        console.log('Submitting solution:', code);
+
+        // TODO: Run all tests and validate
+        // For now, just show success
+        this.showSuccess();
+
+        this.time.delayedCall(2000, () => {
+            this.closeChallenge();
+        });
+    }
+
+    private showSuccess() {
+        const centerX = this.scale.width / 2;
+        const centerY = this.scale.height / 2;
+
+        const successOverlay = this.add.container(centerX, centerY);
+        successOverlay.setDepth(10000);
+
+        const bg = this.add.rectangle(0, 0, 500, 250, 0x4CAF50);
+        bg.setAlpha(0.95);
+        successOverlay.add(bg);
+
+        const text = this.add.text(0, -50, '✓ Solution Accepted!', {
+            fontSize: '36px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        text.setOrigin(0.5);
+        successOverlay.add(text);
+
+        const stats = this.add.text(0, 20,
+            `Problem ${this.problem.number}/75 Complete\n` +
+            `Earned ${this.problem.reward} points`, {
+            fontSize: '20px',
+            color: '#ffffff',
+            align: 'center'
+        });
+        stats.setOrigin(0.5);
+        successOverlay.add(stats);
+
+        // Animation
+        successOverlay.setScale(0);
+        this.tweens.add({
+            targets: successOverlay,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
+        });
+    }
+
+    private skipProblem() {
+        console.log('Problem skipped with -100 points penalty');
+        this.closeChallenge();
+    }
+
+    private closeChallenge() {
+        // Clean up Monaco editor
+        if (this.editor) {
+            this.editor.dispose();
+        }
+        if (this.editorContainer && this.editorContainer.parentNode) {
+            this.editorContainer.parentNode.removeChild(this.editorContainer);
+        }
+
+        // Resume game scene
+        this.scene.resume('Game');
+        this.scene.stop();
+    }
+
+    private getDifficultyColor(difficulty: number): string {
+        if (difficulty <= 3) return '#4CAF50'; // Easy - Green
+        if (difficulty <= 6) return '#FFC107'; // Medium - Yellow
+        if (difficulty <= 8) return '#FF9800'; // Hard - Orange
+        return '#f44336'; // Very Hard - Red
+    }
+}
