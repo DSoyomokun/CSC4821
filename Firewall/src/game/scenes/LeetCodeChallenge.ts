@@ -221,6 +221,7 @@ export class LeetCodeChallenge extends Scene {
         this.editorContainer.style.position = 'absolute';
         this.editorContainer.style.border = '2px solid #3e3e42';
         this.editorContainer.style.zIndex = '100';
+        this.editorContainer.style.display = 'block';
 
         document.body.appendChild(this.editorContainer);
 
@@ -814,6 +815,11 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private closeChallenge() {
+        // Immediately hide Monaco editor
+        if (this.editorContainer) {
+            this.editorContainer.style.display = 'none';
+        }
+
         // Remove resize listener
         this.scale.off('resize', this.handleResize, this);
 
