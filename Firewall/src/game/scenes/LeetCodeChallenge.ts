@@ -222,13 +222,18 @@ export class LeetCodeChallenge extends Scene {
         this.editorContainer.style.border = '2px solid #3e3e42';
         this.editorContainer.style.zIndex = '100';
         this.editorContainer.style.display = 'block';
+        this.editorContainer.style.pointerEvents = 'none'; // Let clicks pass through to canvas
 
         document.body.appendChild(this.editorContainer);
 
-        // Initialize Monaco editor
+        // Initialize Monaco editor with validation disabled to avoid worker errors
+        const model = monaco.editor.createModel(
+            this.codeByLanguage.get('javascript')!,
+            'javascript'
+        );
+
         this.editor = monaco.editor.create(this.editorContainer, {
-            value: this.codeByLanguage.get('javascript')!,
-            language: 'javascript',
+            model: model,
             theme: 'vs-dark',
             automaticLayout: true,
             minimap: { enabled: false },
@@ -238,6 +243,23 @@ export class LeetCodeChallenge extends Scene {
             wordWrap: 'on',
             tabSize: 2,
             renderWhitespace: 'selection'
+        });
+
+        // Enable pointer events on the Monaco editor itself so it's interactive
+        const monacoDOM = this.editorContainer.querySelector('.monaco-editor');
+        if (monacoDOM) {
+            (monacoDOM as HTMLElement).style.pointerEvents = 'auto';
+        }
+
+        // Disable validation to prevent worker issues
+        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+            noSemanticValidation: true,
+            noSyntaxValidation: true
+        });
+
+        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+            noSemanticValidation: true,
+            noSyntaxValidation: true
         });
 
         // Stop Phaser from capturing keyboard input when typing in Monaco
@@ -263,13 +285,21 @@ export class LeetCodeChallenge extends Scene {
         const canvasRect = canvas.getBoundingClientRect();
 
         // Calculate panel dimensions in game coordinates
+        const centerY = this.scale.height / 2;
         const panelWidth = this.scale.width - 100;
         const panelHeight = this.scale.height - 100;
         const columnWidth = panelWidth / 2 - 40;
 
-        // Calculate position in game coordinates
+        // Calculate Monaco editor position in game coordinates
         const gameLeftOffset = (this.scale.width - panelWidth) / 2 + panelWidth / 2 + 20;
         const gameTopOffset = (this.scale.height - panelHeight) / 2 + 80;
+
+        // Calculate where buttons are in game coordinates
+        const buttonsY = centerY + panelHeight / 2 - 50;
+
+        // Monaco should end 120px before the buttons (with margin)
+        const monacoEndY = buttonsY - 120;
+        const monacoHeight = monacoEndY - gameTopOffset;
 
         // Get scale factors
         const scaleX = canvasRect.width / this.scale.width;
@@ -279,13 +309,22 @@ export class LeetCodeChallenge extends Scene {
         const screenLeft = canvasRect.left + (gameLeftOffset * scaleX);
         const screenTop = canvasRect.top + (gameTopOffset * scaleY);
         const screenWidth = (columnWidth - 30) * scaleX;
-        const screenHeight = (panelHeight - 200) * scaleY;
+        const screenHeight = monacoHeight * scaleY;
 
         // Update Monaco editor position
         this.editorContainer.style.left = `${screenLeft}px`;
         this.editorContainer.style.top = `${screenTop}px`;
         this.editorContainer.style.width = `${screenWidth}px`;
         this.editorContainer.style.height = `${screenHeight}px`;
+
+        console.log('Monaco editor bounds:', {
+            left: screenLeft,
+            top: screenTop,
+            width: screenWidth,
+            height: screenHeight,
+            bottom: screenTop + screenHeight,
+            buttonsStartY: canvasRect.top + (buttonsY * scaleY)
+        });
     }
 
     private handleResize() {
@@ -355,20 +394,16 @@ export class LeetCodeChallenge extends Scene {
 
     private createControlButtons(x: number, y: number) {
         // Run Tests button
-        const runButton = this.createButton(x - 300, y, 'Run Tests', 0x2196F3);
-        runButton.on('pointerdown', () => this.runTests());
+        this.createButton(x - 300, y, 'Run Tests', 0x2196F3, () => this.runTests());
 
         // Submit button
-        const submitButton = this.createButton(x - 100, y, 'Submit', 0x4CAF50);
-        submitButton.on('pointerdown', () => this.submitSolution());
+        this.createButton(x - 100, y, 'Submit', 0x4CAF50, () => this.submitSolution());
 
         // Skip button
-        const skipButton = this.createButton(x + 100, y, 'Skip', 0xf44336);
-        skipButton.on('pointerdown', () => this.skipProblem());
+        this.createButton(x + 100, y, 'Skip', 0xf44336, () => this.skipProblem());
 
         // Close button
-        const closeButton = this.createButton(x + 300, y, 'Close (ESC)', 0x666666);
-        closeButton.on('pointerdown', () => this.closeChallenge());
+        this.createButton(x + 300, y, 'Close (ESC)', 0x666666, () => this.closeChallenge());
 
         // Setup keyboard shortcuts
         this.input.keyboard?.on('keydown-ESC', () => {
@@ -376,7 +411,7 @@ export class LeetCodeChallenge extends Scene {
         });
     }
 
-    private createButton(x: number, y: number, text: string, color: number): Phaser.GameObjects.Container {
+    private createButton(x: number, y: number, text: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
         const button = this.add.container(x, y);
 
         const bg = this.add.rectangle(0, 0, 150, 45, color);
@@ -391,6 +426,9 @@ export class LeetCodeChallenge extends Scene {
         label.setOrigin(0.5);
         button.add(label);
 
+        // Click handler
+        bg.on('pointerdown', onClick);
+
         // Hover effect
         bg.on('pointerover', () => {
             bg.setFillStyle(color + 0x333333);
@@ -403,8 +441,9 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private runTests() {
+        console.log('=== RUN TESTS BUTTON CLICKED ===');
         const code = this.editor.getValue();
-        console.log('Running tests with code:', code);
+        console.log('Code from editor:', code);
 
         try {
             // Execute the user's code
@@ -454,6 +493,7 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private submitSolution() {
+        console.log('=== SUBMIT BUTTON CLICKED ===');
         const code = this.editor.getValue();
         console.log('Submitting solution:', code);
 
@@ -519,6 +559,11 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private showSuccess() {
+        // Hide Monaco editor so overlay appears on top
+        if (this.editorContainer) {
+            this.editorContainer.style.display = 'none';
+        }
+
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
 
@@ -559,6 +604,7 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private skipProblem() {
+        console.log('=== SKIP BUTTON CLICKED ===');
         const confirmSkip = confirm('Skip this problem?\n\nYou will receive a -100 point penalty.');
 
         if (confirmSkip) {
@@ -653,6 +699,11 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private showTestResults(results: TestResult[], isSubmission: boolean = false) {
+        // Hide Monaco editor so overlay appears on top
+        if (this.editorContainer) {
+            this.editorContainer.style.display = 'none';
+        }
+
         // Create a results overlay
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
@@ -747,6 +798,10 @@ export class LeetCodeChallenge extends Scene {
         closeBtn.setInteractive({ useHandCursor: true });
         closeBtn.on('pointerdown', () => {
             resultsOverlay.destroy();
+            // Show Monaco editor again
+            if (this.editorContainer) {
+                this.editorContainer.style.display = 'block';
+            }
         });
         resultsOverlay.add(closeBtn);
 
@@ -762,6 +817,11 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private showError(message: string) {
+        // Hide Monaco editor so overlay appears on top
+        if (this.editorContainer) {
+            this.editorContainer.style.display = 'none';
+        }
+
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
 
@@ -800,6 +860,10 @@ export class LeetCodeChallenge extends Scene {
         closeBtn.setInteractive({ useHandCursor: true });
         closeBtn.on('pointerdown', () => {
             errorOverlay.destroy();
+            // Show Monaco editor again
+            if (this.editorContainer) {
+                this.editorContainer.style.display = 'block';
+            }
         });
         errorOverlay.add(closeBtn);
 
