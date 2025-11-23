@@ -566,6 +566,10 @@ export class LeetCodeChallenge extends Scene {
 
             for (const line of lines) {
                 if (line.trim() === '' || line.trim().startsWith('#')) continue;
+
+                // Skip pass statements
+                if (line.trim() === 'pass') continue;
+
                 // Remove leading indentation (4 spaces or 1 tab)
                 const dedented = line.replace(/^(\s{4}|\t)/, '');
 
@@ -574,13 +578,9 @@ export class LeetCodeChallenge extends Scene {
                     .replace(/\bTrue\b/g, 'true')
                     .replace(/\bFalse\b/g, 'false')
                     .replace(/\bNone\b/g, 'null')
-                    .replace(/\blen\(/g, '(')  // len(arr) -> arr.length
-                    .replace(/\)\.length/g, ').length')
-                    .replace(/\brange\(/g, 'Array.from({length: ')
                     .replace(/\band\b/g, '&&')
                     .replace(/\bor\b/g, '||')
                     .replace(/\bnot\b/g, '!')
-                    .replace(/\bpass\b/g, '')
                     .replace(/\bdef\b/g, 'function')
                     .replace(/\bself\./g, 'this.');
 
@@ -590,6 +590,11 @@ export class LeetCodeChallenge extends Scene {
                 }
 
                 body += jsLine + '\n';
+            }
+
+            // If body is empty, return undefined
+            if (body.trim() === '') {
+                body = 'return undefined;';
             }
 
             // Create JavaScript function
