@@ -7,6 +7,9 @@ export class LeetCodeChallenge extends Scene {
     private distanceTraveled!: number;
     private editor!: monaco.editor.IStandaloneCodeEditor;
     private editorContainer!: HTMLElement;
+    private currentLanguage: 'javascript' | 'python' = 'javascript';
+    private languageBadge!: Phaser.GameObjects.Text;
+    private codeByLanguage: Map<string, string> = new Map();
 
     constructor() {
         super('LeetCodeChallenge');
@@ -171,21 +174,44 @@ export class LeetCodeChallenge extends Scene {
         });
         editorTitle.setOrigin(0.5, 0);
 
-        // Language badge
-        const langBadge = this.add.text(x - width / 2 + 20, topY,
+        // Language selector buttons
+        const jsButton = this.add.text(x - width / 2 + 20, topY,
             'JavaScript', {
             fontSize: '14px',
-            color: '#FFC107',
+            color: '#ffffff',
+            backgroundColor: '#FFC107',
+            padding: { x: 8, y: 4 }
+        });
+        jsButton.setOrigin(0, 0);
+        jsButton.setInteractive({ useHandCursor: true });
+        jsButton.on('pointerdown', () => this.switchLanguage('javascript'));
+
+        const pythonButton = this.add.text(x - width / 2 + 110, topY,
+            'Python', {
+            fontSize: '14px',
+            color: '#cccccc',
             backgroundColor: '#2d2d30',
             padding: { x: 8, y: 4 }
         });
-        langBadge.setOrigin(0, 0);
+        pythonButton.setOrigin(0, 0);
+        pythonButton.setInteractive({ useHandCursor: true });
+        pythonButton.on('pointerdown', () => this.switchLanguage('python'));
+
+        // Store reference to language badge for updates
+        this.languageBadge = jsButton;
+
+        // Store both buttons for toggling active state
+        (jsButton as any).pythonButton = pythonButton;
 
         // Monaco editor will be mounted here as DOM element
         // We'll create the DOM container but not add visual elements in Phaser
     }
 
     private initializeMonacoEditor() {
+        // Initialize starter code for both languages
+        this.codeByLanguage.set('javascript', this.problem.starterCode || this.getDefaultStarterCode('javascript'));
+        this.codeByLanguage.set('python', this.problem.starterCodePython || this.getDefaultStarterCode('python'));
+
         // Create DOM element for Monaco editor
         this.editorContainer = document.createElement('div');
         this.editorContainer.id = 'monaco-editor-container';
@@ -209,7 +235,7 @@ export class LeetCodeChallenge extends Scene {
 
         // Initialize Monaco editor
         this.editor = monaco.editor.create(this.editorContainer, {
-            value: this.problem.starterCode || this.getDefaultStarterCode(),
+            value: this.codeByLanguage.get('javascript')!,
             language: 'javascript',
             theme: 'vs-dark',
             automaticLayout: true,
@@ -225,8 +251,65 @@ export class LeetCodeChallenge extends Scene {
         console.log('Monaco editor initialized');
     }
 
-    private getDefaultStarterCode(): string {
-        return `var ${this.problem.functionName} = function(${this.problem.parameters.join(', ')}) {\n    // Write your solution here\n    \n};\n`;
+    private getDefaultStarterCode(language: 'javascript' | 'python'): string {
+        if (language === 'python') {
+            // Convert camelCase to snake_case for Python
+            const pythonFunctionName = this.problem.functionName.replace(/([A-Z])/g, '_$1').toLowerCase();
+            return `def ${pythonFunctionName}(${this.problem.parameters.join(', ')}):\n    # Write your solution here\n    pass\n`;
+        } else {
+            return `var ${this.problem.functionName} = function(${this.problem.parameters.join(', ')}) {\n    // Write your solution here\n    \n};\n`;
+        }
+    }
+
+    private switchLanguage(language: 'javascript' | 'python') {
+        if (language === this.currentLanguage) return;
+
+        // Save current code before switching
+        this.codeByLanguage.set(this.currentLanguage, this.editor.getValue());
+
+        // Update language
+        this.currentLanguage = language;
+
+        // Get code for new language or use default
+        const newCode = this.codeByLanguage.get(language) || this.getDefaultStarterCode(language);
+
+        // Update Monaco editor
+        monaco.editor.setModelLanguage(this.editor.getModel()!, language);
+        this.editor.setValue(newCode);
+
+        // Update UI - toggle button states
+        const jsButton = this.languageBadge;
+        const pythonButton = (jsButton as any).pythonButton;
+
+        if (language === 'javascript') {
+            jsButton.setStyle({
+                fontSize: '14px',
+                color: '#ffffff',
+                backgroundColor: '#FFC107',
+                padding: { x: 8, y: 4 }
+            });
+            pythonButton.setStyle({
+                fontSize: '14px',
+                color: '#cccccc',
+                backgroundColor: '#2d2d30',
+                padding: { x: 8, y: 4 }
+            });
+        } else {
+            jsButton.setStyle({
+                fontSize: '14px',
+                color: '#cccccc',
+                backgroundColor: '#2d2d30',
+                padding: { x: 8, y: 4 }
+            });
+            pythonButton.setStyle({
+                fontSize: '14px',
+                color: '#ffffff',
+                backgroundColor: '#3776AB', // Python blue
+                padding: { x: 8, y: 4 }
+            });
+        }
+
+        console.log(`Switched to ${language}`);
     }
 
     private createControlButtons(x: number, y: number) {
@@ -287,7 +370,7 @@ export class LeetCodeChallenge extends Scene {
             const userFunction = this.evaluateUserCode(code);
 
             // Run visible test cases
-            const results = this.problem.testCases.map((testCase, index) => {
+            const results = this.problem.testCases.map((testCase) => {
                 try {
                     const startTime = performance.now();
                     // Handle input - if it's already an array, wrap it; if not, use as is
@@ -448,12 +531,78 @@ export class LeetCodeChallenge extends Scene {
         // Create a safe evaluation context
         // Extract the function from the code
         try {
-            // Use Function constructor to safely evaluate the code
-            const evalCode = `${code}\nreturn ${this.problem.functionName};`;
-            const fn = new Function(evalCode);
-            return fn();
+            if (this.currentLanguage === 'python') {
+                // For Python, we need to transpile or use a Python runtime
+                // Using Brython or Pyodide would be ideal, but for now we'll convert simple Python to JS
+                return this.transpilePythonToJS(code);
+            } else {
+                // JavaScript evaluation
+                const evalCode = `${code}\nreturn ${this.problem.functionName};`;
+                const fn = new Function(evalCode);
+                return fn();
+            }
         } catch (error) {
             throw new Error(`Compilation error: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    private transpilePythonToJS(pythonCode: string): Function {
+        try {
+            // Simple Python to JavaScript transpilation for basic LeetCode problems
+            // This is a basic implementation - for production, use Brython or Pyodide
+
+            // Extract function definition
+            const functionMatch = pythonCode.match(/def\s+(\w+)\s*\((.*?)\):/);
+            if (!functionMatch) {
+                throw new Error('Could not find Python function definition');
+            }
+
+            const functionName = functionMatch[1];
+            const params = functionMatch[2];
+
+            // Extract function body (everything after the first line, indented)
+            const lines = pythonCode.split('\n').slice(1);
+            let body = '';
+
+            for (const line of lines) {
+                if (line.trim() === '' || line.trim().startsWith('#')) continue;
+                // Remove leading indentation (4 spaces or 1 tab)
+                const dedented = line.replace(/^(\s{4}|\t)/, '');
+
+                // Basic Python to JS conversions
+                let jsLine = dedented
+                    .replace(/\bTrue\b/g, 'true')
+                    .replace(/\bFalse\b/g, 'false')
+                    .replace(/\bNone\b/g, 'null')
+                    .replace(/\blen\(/g, '(')  // len(arr) -> arr.length
+                    .replace(/\)\.length/g, ').length')
+                    .replace(/\brange\(/g, 'Array.from({length: ')
+                    .replace(/\band\b/g, '&&')
+                    .replace(/\bor\b/g, '||')
+                    .replace(/\bnot\b/g, '!')
+                    .replace(/\bpass\b/g, '')
+                    .replace(/\bdef\b/g, 'function')
+                    .replace(/\bself\./g, 'this.');
+
+                // Handle len() properly
+                if (jsLine.includes('len(')) {
+                    jsLine = jsLine.replace(/len\(([^)]+)\)/g, '$1.length');
+                }
+
+                body += jsLine + '\n';
+            }
+
+            // Create JavaScript function
+            const jsCode = `
+                return function ${functionName}(${params}) {
+                    ${body}
+                };
+            `;
+
+            const fn = new Function(jsCode);
+            return fn();
+        } catch (error) {
+            throw new Error(`Python transpilation error: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
