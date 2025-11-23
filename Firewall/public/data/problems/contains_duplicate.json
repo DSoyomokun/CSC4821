@@ -32,6 +32,7 @@
   "parameters": ["nums"],
   "returnType": "boolean",
   "starterCode": "var containsDuplicate = function(nums) {\n    \n};",
+  "starterCodePython": "def contains_duplicate(nums):\n    # Write your solution here\n    pass",
   "testCases": [
     {
       "input": [1, 2, 3, 1],
