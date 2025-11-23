@@ -228,8 +228,9 @@ export class LeetCodeChallenge extends Scene {
         this.editorContainer.style.left = `${leftOffset}px`;
         this.editorContainer.style.top = `${topOffset}px`;
         this.editorContainer.style.width = `${columnWidth - 30}px`;
-        this.editorContainer.style.height = `${panelHeight - 100}px`;
+        this.editorContainer.style.height = `${panelHeight - 200}px`;
         this.editorContainer.style.border = '2px solid #3e3e42';
+        this.editorContainer.style.zIndex = '100';
 
         document.body.appendChild(this.editorContainer);
 
@@ -246,6 +247,15 @@ export class LeetCodeChallenge extends Scene {
             wordWrap: 'on',
             tabSize: 2,
             renderWhitespace: 'selection'
+        });
+
+        // Stop Phaser from capturing keyboard input when typing in Monaco
+        this.editorContainer.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+        });
+
+        this.editorContainer.addEventListener('keyup', (e) => {
+            e.stopPropagation();
         });
 
         console.log('Monaco editor initialized');
