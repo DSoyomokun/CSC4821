@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { LeetCodeProblem } from '../types/LeetCodeTypes';
+import { LeetCodeProblem, TestResult } from '../types/LeetCodeTypes';
 import * as monaco from 'monaco-editor';
 
 export class LeetCodeChallenge extends Scene {
@@ -201,8 +201,8 @@ export class LeetCodeChallenge extends Scene {
 
         this.editorContainer.style.left = `${leftOffset}px`;
         this.editorContainer.style.top = `${topOffset}px`;
-        this.editorContainer.style.width = `${columnWidth - 40}px`;
-        this.editorContainer.style.height = `${panelHeight - 200}px`;
+        this.editorContainer.style.width = `${columnWidth - 30}px`;
+        this.editorContainer.style.height = `${panelHeight - 100}px`;
         this.editorContainer.style.border = '2px solid #3e3e42';
 
         document.body.appendChild(this.editorContainer);
@@ -282,22 +282,116 @@ export class LeetCodeChallenge extends Scene {
         const code = this.editor.getValue();
         console.log('Running tests with code:', code);
 
-        // TODO: Implement test runner
-        // For now, just log
-        alert('Test runner not yet implemented. Code logged to console.');
+        try {
+            // Execute the user's code
+            const userFunction = this.evaluateUserCode(code);
+
+            // Run visible test cases
+            const results = this.problem.testCases.map((testCase, index) => {
+                try {
+                    const startTime = performance.now();
+                    // Handle input - if it's already an array, wrap it; if not, use as is
+                    const args = Array.isArray(testCase.input) && !Array.isArray(testCase.input[0])
+                        ? [testCase.input]
+                        : Array.isArray(testCase.input)
+                        ? testCase.input
+                        : [testCase.input];
+
+                    const actual = userFunction(...args);
+                    const executionTime = performance.now() - startTime;
+
+                    const passed = JSON.stringify(actual) === JSON.stringify(testCase.expected);
+
+                    return {
+                        passed,
+                        input: testCase.input,
+                        expected: testCase.expected,
+                        actual,
+                        error: null,
+                        executionTime
+                    } as TestResult;
+                } catch (error) {
+                    return {
+                        passed: false,
+                        input: testCase.input,
+                        expected: testCase.expected,
+                        actual: null,
+                        error: error instanceof Error ? error.message : String(error),
+                        executionTime: 0
+                    } as TestResult;
+                }
+            });
+
+            // Display test results
+            this.showTestResults(results);
+        } catch (error) {
+            this.showError(error instanceof Error ? error.message : 'Failed to compile code');
+        }
     }
 
     private submitSolution() {
         const code = this.editor.getValue();
         console.log('Submitting solution:', code);
 
-        // TODO: Run all tests and validate
-        // For now, just show success
-        this.showSuccess();
+        try {
+            // Execute the user's code
+            const userFunction = this.evaluateUserCode(code);
 
-        this.time.delayedCall(2000, () => {
-            this.closeChallenge();
-        });
+            // Run all test cases (including hidden ones)
+            const allTests = [
+                ...this.problem.testCases,
+                ...(this.problem.hiddenTestCases || [])
+            ];
+
+            const results = allTests.map(testCase => {
+                try {
+                    const startTime = performance.now();
+                    // Handle input - if it's already an array, wrap it; if not, use as is
+                    const args = Array.isArray(testCase.input) && !Array.isArray(testCase.input[0])
+                        ? [testCase.input]
+                        : Array.isArray(testCase.input)
+                        ? testCase.input
+                        : [testCase.input];
+
+                    const actual = userFunction(...args);
+                    const executionTime = performance.now() - startTime;
+
+                    const passed = JSON.stringify(actual) === JSON.stringify(testCase.expected);
+
+                    return {
+                        passed,
+                        input: testCase.input,
+                        expected: testCase.expected,
+                        actual,
+                        error: null,
+                        executionTime
+                    } as TestResult;
+                } catch (error) {
+                    return {
+                        passed: false,
+                        input: testCase.input,
+                        expected: testCase.expected,
+                        actual: null,
+                        error: error instanceof Error ? error.message : String(error),
+                        executionTime: 0
+                    } as TestResult;
+                }
+            });
+
+            // Check if all tests passed
+            const allPassed = results.every(r => r.passed);
+
+            if (allPassed) {
+                this.showSuccess();
+                this.time.delayedCall(2000, () => {
+                    this.closeChallenge();
+                });
+            } else {
+                this.showTestResults(results, true);
+            }
+        } catch (error) {
+            this.showError(error instanceof Error ? error.message : 'Failed to compile code');
+        }
     }
 
     private showSuccess() {
@@ -341,8 +435,188 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private skipProblem() {
-        console.log('Problem skipped with -100 points penalty');
-        this.closeChallenge();
+        const confirmSkip = confirm('Skip this problem?\n\nYou will receive a -100 point penalty.');
+
+        if (confirmSkip) {
+            console.log('Problem skipped with -100 points penalty');
+            // TODO: Deduct points from player score
+            this.closeChallenge();
+        }
+    }
+
+    private evaluateUserCode(code: string): Function {
+        // Create a safe evaluation context
+        // Extract the function from the code
+        try {
+            // Use Function constructor to safely evaluate the code
+            const evalCode = `${code}\nreturn ${this.problem.functionName};`;
+            const fn = new Function(evalCode);
+            return fn();
+        } catch (error) {
+            throw new Error(`Compilation error: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    private showTestResults(results: TestResult[], isSubmission: boolean = false) {
+        // Create a results overlay
+        const centerX = this.scale.width / 2;
+        const centerY = this.scale.height / 2;
+
+        const resultsOverlay = this.add.container(centerX, centerY);
+        resultsOverlay.setDepth(10000);
+
+        const passedCount = results.filter(r => r.passed).length;
+        const totalCount = results.length;
+        const allPassed = passedCount === totalCount;
+
+        // Background
+        const bgColor = allPassed ? 0x4CAF50 : 0xf44336;
+        const bg = this.add.rectangle(0, 0, 600, 400, bgColor);
+        bg.setAlpha(0.95);
+        resultsOverlay.add(bg);
+
+        // Title
+        const title = this.add.text(0, -160,
+            isSubmission
+                ? (allPassed ? '✓ All Tests Passed!' : '✗ Some Tests Failed')
+                : 'Test Results', {
+            fontSize: '28px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        title.setOrigin(0.5);
+        resultsOverlay.add(title);
+
+        // Stats
+        const stats = this.add.text(0, -120,
+            `${passedCount}/${totalCount} tests passed`, {
+            fontSize: '18px',
+            color: '#ffffff'
+        });
+        stats.setOrigin(0.5);
+        resultsOverlay.add(stats);
+
+        // Show individual test results (first 5)
+        let yOffset = -80;
+        const maxDisplay = Math.min(5, results.length);
+
+        for (let i = 0; i < maxDisplay; i++) {
+            const result = results[i];
+            const status = result.passed ? '✓' : '✗';
+
+            const testText = this.add.text(-250, yOffset,
+                `${status} Test ${i + 1}: ${JSON.stringify(result.input)}`, {
+                fontSize: '14px',
+                color: '#ffffff',
+                fontFamily: 'Courier New, monospace'
+            });
+            testText.setOrigin(0, 0.5);
+            resultsOverlay.add(testText);
+
+            if (!result.passed) {
+                const errorText = this.add.text(-250, yOffset + 20,
+                    result.error
+                        ? `Error: ${result.error}`
+                        : `Expected: ${JSON.stringify(result.expected)}, Got: ${JSON.stringify(result.actual)}`, {
+                    fontSize: '12px',
+                    color: '#ffcccc',
+                    fontFamily: 'Courier New, monospace',
+                    wordWrap: { width: 500 }
+                });
+                errorText.setOrigin(0, 0);
+                resultsOverlay.add(errorText);
+                yOffset += 25;
+            }
+
+            yOffset += 30;
+        }
+
+        if (results.length > maxDisplay) {
+            const moreText = this.add.text(0, yOffset,
+                `... and ${results.length - maxDisplay} more tests`, {
+                fontSize: '14px',
+                color: '#cccccc'
+            });
+            moreText.setOrigin(0.5);
+            resultsOverlay.add(moreText);
+        }
+
+        // Close button
+        const closeBtn = this.add.text(0, 160, 'Close', {
+            fontSize: '18px',
+            color: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 20, y: 10 }
+        });
+        closeBtn.setOrigin(0.5);
+        closeBtn.setInteractive({ useHandCursor: true });
+        closeBtn.on('pointerdown', () => {
+            resultsOverlay.destroy();
+        });
+        resultsOverlay.add(closeBtn);
+
+        // Animation
+        resultsOverlay.setScale(0);
+        this.tweens.add({
+            targets: resultsOverlay,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
+        });
+    }
+
+    private showError(message: string) {
+        const centerX = this.scale.width / 2;
+        const centerY = this.scale.height / 2;
+
+        const errorOverlay = this.add.container(centerX, centerY);
+        errorOverlay.setDepth(10000);
+
+        const bg = this.add.rectangle(0, 0, 500, 200, 0xf44336);
+        bg.setAlpha(0.95);
+        errorOverlay.add(bg);
+
+        const title = this.add.text(0, -50, '✗ Compilation Error', {
+            fontSize: '24px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        title.setOrigin(0.5);
+        errorOverlay.add(title);
+
+        const errorText = this.add.text(0, 0, message, {
+            fontSize: '14px',
+            color: '#ffffff',
+            fontFamily: 'Courier New, monospace',
+            wordWrap: { width: 450 },
+            align: 'center'
+        });
+        errorText.setOrigin(0.5);
+        errorOverlay.add(errorText);
+
+        const closeBtn = this.add.text(0, 70, 'Close', {
+            fontSize: '16px',
+            color: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 20, y: 8 }
+        });
+        closeBtn.setOrigin(0.5);
+        closeBtn.setInteractive({ useHandCursor: true });
+        closeBtn.on('pointerdown', () => {
+            errorOverlay.destroy();
+        });
+        errorOverlay.add(closeBtn);
+
+        // Animation
+        errorOverlay.setScale(0);
+        this.tweens.add({
+            targets: errorOverlay,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
+        });
     }
 
     private closeChallenge() {
