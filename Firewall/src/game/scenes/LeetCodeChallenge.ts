@@ -29,6 +29,9 @@ export class LeetCodeChallenge extends Scene {
 
         // Initialize Monaco editor
         this.initializeMonacoEditor();
+
+        // Listen for resize events
+        this.scale.on('resize', this.handleResize, this);
     }
 
     private createBackdrop() {
@@ -216,19 +219,6 @@ export class LeetCodeChallenge extends Scene {
         this.editorContainer = document.createElement('div');
         this.editorContainer.id = 'monaco-editor-container';
         this.editorContainer.style.position = 'absolute';
-
-        // Position on right side of screen
-        const panelWidth = this.scale.width - 100;
-        const panelHeight = this.scale.height - 100;
-        const columnWidth = panelWidth / 2 - 40;
-
-        const leftOffset = (this.scale.width - panelWidth) / 2 + panelWidth / 2 + 20;
-        const topOffset = (this.scale.height - panelHeight) / 2 + 80;
-
-        this.editorContainer.style.left = `${leftOffset}px`;
-        this.editorContainer.style.top = `${topOffset}px`;
-        this.editorContainer.style.width = `${columnWidth - 30}px`;
-        this.editorContainer.style.height = `${panelHeight - 200}px`;
         this.editorContainer.style.border = '2px solid #3e3e42';
         this.editorContainer.style.zIndex = '100';
 
@@ -258,7 +248,47 @@ export class LeetCodeChallenge extends Scene {
             e.stopPropagation();
         });
 
+        // Position the editor correctly initially
+        this.updateMonacoPosition();
+
         console.log('Monaco editor initialized');
+    }
+
+    private updateMonacoPosition() {
+        if (!this.editorContainer) return;
+
+        // Get the Phaser canvas element
+        const canvas = this.game.canvas;
+        const canvasRect = canvas.getBoundingClientRect();
+
+        // Calculate panel dimensions in game coordinates
+        const panelWidth = this.scale.width - 100;
+        const panelHeight = this.scale.height - 100;
+        const columnWidth = panelWidth / 2 - 40;
+
+        // Calculate position in game coordinates
+        const gameLeftOffset = (this.scale.width - panelWidth) / 2 + panelWidth / 2 + 20;
+        const gameTopOffset = (this.scale.height - panelHeight) / 2 + 80;
+
+        // Get scale factors
+        const scaleX = canvasRect.width / this.scale.width;
+        const scaleY = canvasRect.height / this.scale.height;
+
+        // Convert game coordinates to screen coordinates
+        const screenLeft = canvasRect.left + (gameLeftOffset * scaleX);
+        const screenTop = canvasRect.top + (gameTopOffset * scaleY);
+        const screenWidth = (columnWidth - 30) * scaleX;
+        const screenHeight = (panelHeight - 200) * scaleY;
+
+        // Update Monaco editor position
+        this.editorContainer.style.left = `${screenLeft}px`;
+        this.editorContainer.style.top = `${screenTop}px`;
+        this.editorContainer.style.width = `${screenWidth}px`;
+        this.editorContainer.style.height = `${screenHeight}px`;
+    }
+
+    private handleResize() {
+        this.updateMonacoPosition();
     }
 
     private getDefaultStarterCode(language: 'javascript' | 'python'): string {
@@ -784,6 +814,9 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private closeChallenge() {
+        // Remove resize listener
+        this.scale.off('resize', this.handleResize, this);
+
         // Clean up Monaco editor
         if (this.editor) {
             this.editor.dispose();
