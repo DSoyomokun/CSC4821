@@ -22,14 +22,8 @@ export class RunnerPlayer {
     constructor(scene: Scene, groundY: number) {
         this.scene = scene;
 
-        // Create placeholder graphics for standing and sliding
+        // Create placeholder graphics for sliding
         const graphics = scene.add.graphics();
-
-        // Standing sprite (40x60)
-        graphics.fillStyle(0x3498db, 1);
-        graphics.fillRect(0, 0, 40, 60);
-        graphics.generateTexture('player-standing', 40, 60);
-        graphics.clear();
 
         // Sliding sprite (60x30 - wider and shorter)
         graphics.fillStyle(0x3498db, 1);
@@ -37,12 +31,24 @@ export class RunnerPlayer {
         graphics.generateTexture('player-sliding', 60, 30);
         graphics.destroy();
 
-        // Create player sprite with physics
-        this.sprite = scene.physics.add.sprite(this.PLAYER_X, groundY - 30, 'player-standing');
+        // Create player sprite with physics - using running animation
+        this.sprite = scene.physics.add.sprite(this.PLAYER_X, groundY - 30, 'player-run');
         this.sprite.setOrigin(0.5, 1); // Bottom center origin
+
+        // Scale down the huge sprite to reasonable size (768x448 -> ~77x45)
+        this.sprite.setScale(0.9);
+
         this.sprite.setCollideWorldBounds(false);
         this.sprite.setBounce(0);
         this.sprite.setGravityY(0); // Using scene gravity instead
+
+        // Set body size after scaling
+        if (this.sprite.body) {
+            (this.sprite.body as Phaser.Physics.Arcade.Body).setSize(40, 60);
+        }
+
+        // Play running animation
+        this.sprite.play('player-run');
 
         // Setup input
         this.setupInput();
@@ -111,9 +117,13 @@ export class RunnerPlayer {
         this.isSliding = true;
         this.slideTimer = this.SLIDE_DURATION;
 
-        // Switch to sliding sprite and adjust hitbox
+        // Stop running animation and switch to sliding sprite
+        this.sprite.stop();
         this.sprite.setTexture('player-sliding');
-        this.sprite.setSize(60, 30);
+        this.sprite.setScale(1); // Reset scale for sliding sprite
+        if (this.sprite.body) {
+            (this.sprite.body as Phaser.Physics.Arcade.Body).setSize(60, 30);
+        }
 
         console.log('Player sliding!');
         // TODO: Play slide animation
@@ -123,9 +133,12 @@ export class RunnerPlayer {
     private endSlide(): void {
         this.isSliding = false;
 
-        // Switch back to standing sprite and restore hitbox
-        this.sprite.setTexture('player-standing');
-        this.sprite.setSize(40, 60);
+        // Switch back to running animation and restore hitbox
+        this.sprite.play('player-run');
+        this.sprite.setScale(0.1); // Restore scale for running animation
+        if (this.sprite.body) {
+            (this.sprite.body as Phaser.Physics.Arcade.Body).setSize(40, 60);
+        }
 
         console.log('Slide ended');
     }
