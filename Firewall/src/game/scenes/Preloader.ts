@@ -39,6 +39,10 @@ export class Preloader extends Scene
         this.load.setPath('data');
         this.load.json('spawn_patterns', 'spawn_patterns.json');
         this.load.json('challenges', 'challenges.json');
+
+        // Load LeetCode problems
+        this.load.setPath('data/problems');
+        this.load.json('problem_contains_duplicate', 'contains_duplicate.json');
     }
 
     create ()

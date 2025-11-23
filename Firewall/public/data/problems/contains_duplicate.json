@@ -1,0 +1,62 @@
+{
+  "id": "contains_duplicate",
+  "number": 1,
+  "title": "Contains Duplicate",
+  "difficulty": 1,
+  "leetcodeDifficulty": "Easy",
+  "topic": "Arrays & Hashing",
+  "topics": ["Array", "Hash Table"],
+  "description": "Given an integer array nums, return true if any value appears at least twice in the array, and return false if every element is distinct.",
+  "examples": [
+    {
+      "input": "nums = [1,2,3,1]",
+      "output": "true",
+      "explanation": "The element 1 appears twice"
+    },
+    {
+      "input": "nums = [1,2,3,4]",
+      "output": "false",
+      "explanation": "All elements are distinct"
+    }
+  ],
+  "constraints": [
+    "1 <= nums.length <= 10^5",
+    "-10^9 <= nums[i] <= 10^9"
+  ],
+  "hints": [
+    "Consider using a hash set to track seen elements",
+    "What's the time complexity of checking if an element exists in a hash set?"
+  ],
+  "functionName": "containsDuplicate",
+  "functionSignature": "@param {number[]} nums\n@return {boolean}",
+  "parameters": ["nums"],
+  "returnType": "boolean",
+  "starterCode": "var containsDuplicate = function(nums) {\n    \n};",
+  "starterCodePython": "def contains_duplicate(nums):\n    # Write your solution here\n    pass",
+  "testCases": [
+    {
+      "input": [1, 2, 3, 1],
+      "expected": true
+    },
+    {
+      "input": [1, 2, 3, 4],
+      "expected": false
+    },
+    {
+      "input": [1, 1, 1, 3, 3, 4, 3, 2, 4, 2],
+      "expected": true
+    }
+  ],
+  "hiddenTestCases": [
+    {
+      "input": [],
+      "expected": false
+    },
+    {
+      "input": [1],
+      "expected": false
+    }
+  ],
+  "reward": 100,
+  "companies": ["Amazon", "Apple", "Adobe"]
+}

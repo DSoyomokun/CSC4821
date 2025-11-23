@@ -89,6 +89,8 @@ export class DiamondSpawner {
         this.diamondsGroup.add(diamond.sprite);
 
         console.log(`Spawned ${tier} diamond with challenge ${challengeId} at x=${x}`);
+        console.log(`Diamond added to group. Group size: ${this.diamondsGroup.getLength()}`);
+        console.log(`Diamond sprite body:`, diamond.sprite.body);
     }
 
     public setScrollSpeed(speed: number): void {

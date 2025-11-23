@@ -19,7 +19,7 @@ export class Game extends Scene
 
     // Laser spawning
     private laserSpawnTimer: number = 0;
-    private laserSpawnInterval: number = 1200; // milliseconds
+    private laserSpawnInterval: number = 120000; // milliseconds
 
     // UI
     private distanceText!: Phaser.GameObjects.Text;
@@ -27,6 +27,8 @@ export class Game extends Scene
 
     // Collision
     private collisionGroup!: Phaser.Physics.Arcade.Group;
+    private laserCollider!: Phaser.Physics.Arcade.Collider;
+    private diamondCollider!: Phaser.Physics.Arcade.Collider;
     private isDiamondPaused: boolean = false;
 
     constructor ()
@@ -54,6 +56,23 @@ export class Game extends Scene
 
         // Create diamond spawner
         this.diamondSpawner = new DiamondSpawner(this, this.GROUND_Y, this.scrollSpeed);
+
+        // Setup collisions ONCE (not every frame!)
+        this.laserCollider = this.physics.add.overlap(
+            this.player.getSprite(),
+            this.collisionGroup,
+            this.handleLaserCollision,
+            undefined,
+            this
+        );
+
+        this.diamondCollider = this.physics.add.overlap(
+            this.player.getSprite(),
+            this.diamondSpawner.diamondsGroup,
+            this.handleDiamondCollision,
+            undefined,
+            this
+        );
 
         // Setup UI
         this.setupUI();
@@ -103,9 +122,6 @@ export class Game extends Scene
 
         // Update diamond spawner
         this.diamondSpawner.update(delta, this.distance);
-
-        // Check collisions
-        this.checkCollisions();
     }
 
     private updatelaserSpawning(delta: number): void {
@@ -160,26 +176,6 @@ export class Game extends Scene
         }
     }
 
-    private checkCollisions(): void {
-        // Check overlap between player and lasers
-        this.physics.overlap(
-            this.player.getSprite(),
-            this.collisionGroup,
-            this.handleLaserCollision,
-            undefined,
-            this
-        );
-
-        // Check overlap between player and diamonds
-        this.physics.overlap(
-            this.player.getSprite(),
-            this.diamondSpawner.diamondsGroup,
-            this.handleDiamondCollision,
-            undefined,
-            this
-        );
-    }
-
     private handleLaserCollision(): void {
         console.log('COLLISION DETECTED!');
         // TODO: Trigger QTE system
@@ -208,30 +204,19 @@ export class Game extends Scene
         // Pause the game
         this.scene.pause();
 
-        // Show a simple message (will be replaced with challenge overlay later)
-        const pauseText = this.add.text(960, 540,
-            `GAME PAUSED\n\nCollected ${tier.toUpperCase()} Diamond!\nChallenge: ${challengeId}\n\nPress SPACE to resume`,
-            {
-                fontFamily: 'Arial',
-                fontSize: '32px',
-                color: '#ffffff',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 20 },
-                align: 'center'
-            }
-        ).setOrigin(0.5).setDepth(5000);
+        // Load the problem data
+        const problem = this.cache.json.get('problem_contains_duplicate');
 
-        // Add space key to resume
-        const resumeHandler = (event: KeyboardEvent) => {
-            if (event.code === 'Space') {
-                pauseText.destroy();
-                this.scene.resume();
-                this.isDiamondPaused = false;
+        // Launch LeetCode Challenge Scene
+        this.scene.launch('LeetCodeChallenge', {
+            problem: problem,
+            distanceTraveled: this.distance
+        });
 
-                window.removeEventListener('keydown', resumeHandler);
-            }
-        };
-        window.addEventListener('keydown', resumeHandler);
+        // Listen for when challenge scene closes to reset pause state
+        this.scene.get('LeetCodeChallenge').events.once('shutdown', () => {
+            this.isDiamondPaused = false;
+        });
     }
 
     changeScene ()
