@@ -44,6 +44,43 @@ export class GameOver extends Scene
             align: 'center'
         }).setOrigin(0.5).setDepth(100);
 
+        // Restart button
+        const buttonY = centerY + 180;
+        const buttonWidth = 280;
+        const buttonHeight = 70;
+
+        // Button background
+        const buttonBg = this.add.rectangle(centerX, buttonY, buttonWidth, buttonHeight, 0x00ff00);
+        buttonBg.setStrokeStyle(4, 0xffffff);
+        buttonBg.setInteractive({ useHandCursor: true });
+        buttonBg.setDepth(100);
+
+        // Button text
+        const buttonText = this.add.text(centerX, buttonY, 'RESTART GAME', {
+            fontFamily: 'Arial Black',
+            fontSize: '28px',
+            color: '#000000',
+            align: 'center'
+        }).setOrigin(0.5).setDepth(101);
+
+        // Button interactions
+        buttonBg.on('pointerover', () => {
+            buttonBg.setFillStyle(0x00cc00);
+            buttonBg.setScale(1.05);
+            buttonText.setScale(1.05);
+        });
+
+        buttonBg.on('pointerout', () => {
+            buttonBg.setFillStyle(0x00ff00);
+            buttonBg.setScale(1);
+            buttonText.setScale(1);
+        });
+
+        buttonBg.on('pointerdown', () => {
+            // Restart the game
+            this.scene.start('Game');
+        });
+
         EventBus.emit('current-scene-ready', this);
     }
 
