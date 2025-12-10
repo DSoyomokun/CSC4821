@@ -18,7 +18,7 @@ const phasermsg = () => {
 }
 
 export default defineConfig({
-    base: '/',
+    base: '/CSC4821/',
     plugins: [
         react(),
         phasermsg()
