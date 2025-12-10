@@ -10,13 +10,15 @@ import { LeetCodeChallenge } from './scenes/LeetCodeChallenge';
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: 1024,
+    height: 768,
     parent: 'game-container',
     backgroundColor: '#0a0a1a',
     scale: {
-        mode: Phaser.Scale.RESIZE,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: '100%',
+        height: '100%'
     },
     physics: {
         default: 'arcade',
