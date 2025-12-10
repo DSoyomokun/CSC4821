@@ -349,8 +349,19 @@ export class LeetCodeChallenge extends Scene {
 
     private initializeMonacoEditor() {
         // Initialize starter code for both languages
-        this.codeByLanguage.set('javascript', this.problem.starterCode || this.getDefaultStarterCode('javascript'));
-        this.codeByLanguage.set('python', this.problem.starterCodePython || this.getDefaultStarterCode('python'));
+        const jsCode = this.problem.starterCode || this.getDefaultStarterCode('javascript');
+        const pythonCode = this.problem.starterCodePython || this.getDefaultStarterCode('python');
+        
+        console.log('Initializing Monaco editor:', {
+            hasStarterCode: !!this.problem.starterCode,
+            hasStarterCodePython: !!this.problem.starterCodePython,
+            jsCode,
+            pythonCode,
+            functionName: this.problem.functionName
+        });
+        
+        this.codeByLanguage.set('javascript', jsCode);
+        this.codeByLanguage.set('python', pythonCode);
 
         // Create DOM element for Monaco editor - matrix style
         this.editorContainer = document.createElement('div');
@@ -555,12 +566,61 @@ export class LeetCodeChallenge extends Scene {
         // Update language
         this.currentLanguage = language;
 
-        // Get code for new language or use default
-        const newCode = this.codeByLanguage.get(language) || this.getDefaultStarterCode(language);
+        // Get code for new language
+        // Always check if we have saved code first, but if it's empty or just whitespace, use starter code
+        let newCode = this.codeByLanguage.get(language);
+        const savedCodeIsEmpty = !newCode || newCode.trim() === '' || 
+                                 (language === 'python' && newCode.includes('function')) ||
+                                 (language === 'javascript' && newCode.includes('def '));
+        
+        if (!newCode || savedCodeIsEmpty) {
+            // If no saved code or it looks like wrong language, use starter code or default
+            newCode = (language === 'python' 
+                ? this.problem.starterCodePython 
+                : this.problem.starterCode) || this.getDefaultStarterCode(language);
+            this.codeByLanguage.set(language, newCode);
+        }
 
-        // Update Monaco editor
-        monaco.editor.setModelLanguage(this.editor.getModel()!, language);
-        this.editor.setValue(newCode);
+        console.log(`Switching to ${language}:`, {
+            newCode,
+            newCodePreview: newCode?.substring(0, 100),
+            hasStarterCodePython: !!this.problem.starterCodePython,
+            starterCodePythonPreview: this.problem.starterCodePython?.substring(0, 100),
+            hasStarterCode: !!this.problem.starterCode,
+            problemFunctionName: this.problem.functionName
+        });
+
+        // Update Monaco editor - set language first, then value
+        const model = this.editor.getModel();
+        if (model) {
+            // Set the value first
+            this.editor.setValue(newCode || '');
+            
+            // Then set the language
+            monaco.editor.setModelLanguage(model, language);
+            
+            // Force a layout update to ensure the editor refreshes
+            this.editor.layout();
+            
+            // Force editor to update display
+            requestAnimationFrame(() => {
+                this.editor.layout();
+                console.log('Editor updated (after animation frame):', {
+                    currentValue: this.editor.getValue().substring(0, 100),
+                    modelLanguage: model.getLanguageId(),
+                    expectedLanguage: language
+                });
+            });
+            
+            console.log('Editor updated:', {
+                currentValue: this.editor.getValue().substring(0, 100),
+                modelLanguage: model.getLanguageId(),
+                expectedLanguage: language
+            });
+        } else {
+            console.error('Editor model is null!');
+            this.editor.setValue(newCode || '');
+        }
 
         // Update UI - toggle button states
         const jsButton = this.languageBadge;
@@ -957,9 +1017,45 @@ export class LeetCodeChallenge extends Scene {
                     .replace(/\bdef\b/g, 'function')
                     .replace(/\bself\./g, 'this.');
 
+                // Handle Python ternary: "a if condition else b" → "condition ? a : b"
+                // Handle both "return a if condition else b" and "a if condition else b"
+                const hasReturn = jsLine.trim().startsWith('return');
+                const lineWithoutReturn = hasReturn ? jsLine.trim().substring(6).trim() : jsLine.trim();
+                
+                // Match: value1 if condition else value2
+                const ternaryMatch = lineWithoutReturn.match(/^(.+?)\s+if\s+(.+?)\s+else\s+(.+)$/);
+                if (ternaryMatch) {
+                    const [, valueIfTrue, condition, valueIfFalse] = ternaryMatch;
+                    const ternaryExpr = `(${condition}) ? (${valueIfTrue}) : (${valueIfFalse})`;
+                    jsLine = hasReturn ? `return ${ternaryExpr}` : ternaryExpr;
+                }
+
+                // Handle built-in functions
+                // max(a, b) → Math.max(a, b)
+                jsLine = jsLine.replace(/\bmax\(/g, 'Math.max(');
+                // min(a, b) → Math.min(a, b)
+                jsLine = jsLine.replace(/\bmin\(/g, 'Math.min(');
+                // abs(x) → Math.abs(x)
+                jsLine = jsLine.replace(/\babs\(/g, 'Math.abs(');
+                // round(x) → Math.round(x)
+                jsLine = jsLine.replace(/\bround\(/g, 'Math.round(');
                 // Handle len() properly
                 if (jsLine.includes('len(')) {
                     jsLine = jsLine.replace(/len\(([^)]+)\)/g, '$1.length');
+                }
+
+                // Ensure return statement if line doesn't have one and is not a control structure
+                const trimmed = jsLine.trim();
+                if (trimmed && 
+                    !trimmed.startsWith('return') && 
+                    !trimmed.startsWith('if') && 
+                    !trimmed.startsWith('for') && 
+                    !trimmed.startsWith('while') &&
+                    !trimmed.startsWith('}') &&
+                    !trimmed.startsWith('{') &&
+                    !trimmed.includes('=') &&
+                    !trimmed.endsWith(':')) {
+                    jsLine = 'return ' + jsLine;
                 }
 
                 body += jsLine + '\n';
