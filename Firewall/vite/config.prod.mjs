@@ -25,6 +25,7 @@ export default defineConfig({
     ],
     logLevel: 'warning',
     build: {
+        sourcemap: false,
         rollupOptions: {
             output: {
                 manualChunks: {
@@ -35,9 +36,15 @@ export default defineConfig({
         minify: 'terser',
         terserOptions: {
             compress: {
-                passes: 2
+                passes: 2,
+                pure_getters: false,
+                keep_fnames: true,
+                keep_classnames: true
             },
-            mangle: true,
+            mangle: {
+                keep_fnames: true,
+                keep_classnames: true
+            },
             format: {
                 comments: false
             }
