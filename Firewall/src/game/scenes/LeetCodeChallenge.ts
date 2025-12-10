@@ -997,14 +997,28 @@ export class LeetCodeChallenge extends Scene {
                 }))
                 : 0;
 
-            for (const line of lines) {
+            // Track indentation levels to properly close blocks
+            let lastIndentLevel = 0;
+            const indentStack: number[] = [0];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
                 if (line.trim() === '' || line.trim().startsWith('#')) continue;
 
                 // Skip pass statements
                 if (line.trim() === 'pass') continue;
 
-                // Remove the minimum indentation from all lines
+                // Calculate current indentation level
+                const currentIndent = line.match(/^(\s*)/)?.[1].length || 0;
                 const dedented = line.substring(minIndent);
+                const relativeIndent = currentIndent - minIndent;
+
+                // Close blocks when indentation decreases
+                while (indentStack.length > 1 && relativeIndent < indentStack[indentStack.length - 1]) {
+                    indentStack.pop();
+                    body += '    '.repeat(indentStack.length) + '}\n';
+                }
 
                 // Basic Python to JS conversions
                 let jsLine = dedented
@@ -1017,11 +1031,50 @@ export class LeetCodeChallenge extends Scene {
                     .replace(/\bdef\b/g, 'function')
                     .replace(/\bself\./g, 'this.');
 
+                // Handle Python set() → new Set()
+                jsLine = jsLine.replace(/\bset\(\)/g, 'new Set()');
+
+                // Handle Python "x in set/list" → set.has(x) or list.includes(x)
+                // Pattern: "variable in collection"
+                const inCheckMatch = jsLine.match(/(\w+)\s+in\s+(\w+)/);
+                if (inCheckMatch && !jsLine.includes('for')) {
+                    const [fullMatch, item, collection] = inCheckMatch;
+                    // Assume it's a Set for LeetCode problems (more common for membership checks)
+                    jsLine = jsLine.replace(fullMatch, `${collection}.has(${item})`);
+                }
+
+                // Handle for loops: "for x in y:" → "for (const x of y) {"
+                const forLoopMatch = jsLine.match(/for\s+(\w+)\s+in\s+(.+?):\s*$/);
+                if (forLoopMatch) {
+                    const [, loopVar, collection] = forLoopMatch;
+                    jsLine = `for (const ${loopVar} of ${collection}) {`;
+                    indentStack.push(relativeIndent + 4);
+                }
+                // Handle if statements: "if condition:" → "if (condition) {"
+                else if (jsLine.trim().match(/^if\s+.+:\s*$/)) {
+                    jsLine = jsLine.replace(/if\s+(.+?):\s*$/, 'if ($1) {');
+                    indentStack.push(relativeIndent + 4);
+                }
+                // Handle elif → else if
+                else if (jsLine.trim().match(/^elif\s+.+:\s*$/)) {
+                    jsLine = jsLine.replace(/elif\s+(.+?):\s*$/, '} else if ($1) {');
+                    // Don't push to stack, already in if block
+                }
+                // Handle else: → else {
+                else if (jsLine.trim().match(/^else:\s*$/)) {
+                    jsLine = jsLine.replace(/else:\s*$/, '} else {');
+                    // Don't push to stack, already in if block
+                }
+                // Handle while loops: "while condition:" → "while (condition) {"
+                else if (jsLine.trim().match(/^while\s+.+:\s*$/)) {
+                    jsLine = jsLine.replace(/while\s+(.+?):\s*$/, 'while ($1) {');
+                    indentStack.push(relativeIndent + 4);
+                }
+
                 // Handle Python ternary: "a if condition else b" → "condition ? a : b"
-                // Handle both "return a if condition else b" and "a if condition else b"
                 const hasReturn = jsLine.trim().startsWith('return');
                 const lineWithoutReturn = hasReturn ? jsLine.trim().substring(6).trim() : jsLine.trim();
-                
+
                 // Match: value1 if condition else value2
                 const ternaryMatch = lineWithoutReturn.match(/^(.+?)\s+if\s+(.+?)\s+else\s+(.+)$/);
                 if (ternaryMatch) {
@@ -1031,34 +1084,24 @@ export class LeetCodeChallenge extends Scene {
                 }
 
                 // Handle built-in functions
-                // max(a, b) → Math.max(a, b)
                 jsLine = jsLine.replace(/\bmax\(/g, 'Math.max(');
-                // min(a, b) → Math.min(a, b)
                 jsLine = jsLine.replace(/\bmin\(/g, 'Math.min(');
-                // abs(x) → Math.abs(x)
                 jsLine = jsLine.replace(/\babs\(/g, 'Math.abs(');
-                // round(x) → Math.round(x)
                 jsLine = jsLine.replace(/\bround\(/g, 'Math.round(');
-                // Handle len() properly
+
+                // Handle len() → .length
                 if (jsLine.includes('len(')) {
                     jsLine = jsLine.replace(/len\(([^)]+)\)/g, '$1.length');
                 }
 
-                // Ensure return statement if line doesn't have one and is not a control structure
-                const trimmed = jsLine.trim();
-                if (trimmed && 
-                    !trimmed.startsWith('return') && 
-                    !trimmed.startsWith('if') && 
-                    !trimmed.startsWith('for') && 
-                    !trimmed.startsWith('while') &&
-                    !trimmed.startsWith('}') &&
-                    !trimmed.startsWith('{') &&
-                    !trimmed.includes('=') &&
-                    !trimmed.endsWith(':')) {
-                    jsLine = 'return ' + jsLine;
-                }
-
                 body += jsLine + '\n';
+                lastIndentLevel = relativeIndent;
+            }
+
+            // Close any remaining open blocks
+            while (indentStack.length > 1) {
+                indentStack.pop();
+                body += '    '.repeat(indentStack.length) + '}\n';
             }
 
             // If body is empty, return undefined
