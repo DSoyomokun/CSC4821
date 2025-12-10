@@ -7,9 +7,6 @@ export class LeetCodeChallenge extends Scene {
     private distanceTraveled!: number;
     private editor!: monaco.editor.IStandaloneCodeEditor;
     private editorContainer!: HTMLElement;
-    private currentLanguage: 'javascript' | 'python' = 'javascript';
-    private languageBadge!: Phaser.GameObjects.Text;
-    private codeByLanguage: Map<string, string> = new Map();
 
     constructor() {
         super('LeetCodeChallenge');
@@ -240,7 +237,7 @@ export class LeetCodeChallenge extends Scene {
 
         // Editor title - matrix style
         const editorTitle = this.add.text(x, topY,
-            '> CODE EDITOR', {
+            '> CODE EDITOR [PYTHON]', {
             fontSize: '18px',
             color: '#00ff00',
             fontFamily: 'Courier New, monospace',
@@ -251,117 +248,18 @@ export class LeetCodeChallenge extends Scene {
         editorTitle.setOrigin(0.5, 0);
         editorTitle.setDepth(10002); // High depth for visibility
 
-        // Language selector buttons - matrix terminal style
-        // Position buttons prominently at the very top of the panel
-        const buttonY = topY + 30;
-
-        // Create a background panel for language selector for better visibility
-        const selectorBg = this.add.rectangle(x, buttonY + 50, width - 40, 70, 0x001a00, 0.8);
-        selectorBg.setStrokeStyle(2, 0x00ff41, 0.8);
-        selectorBg.setDepth(9999);
-
-        // Language label
-        const langLabel = this.add.text(x, buttonY, '>>> SELECT LANGUAGE <<<', {
-            fontSize: '14px',
-            color: '#00ff41',
-            fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold',
-            stroke: '#00ff41',
-            strokeThickness: 1
-        });
-        langLabel.setOrigin(0.5, 0);
-        langLabel.setDepth(10002);
-
-        // JavaScript button - active by default
-        const jsButton = this.add.text(x - 90, buttonY + 30,
-            '[ JAVASCRIPT ] ✓', {
-            fontSize: '20px',
-            color: '#00ff00', // Bright green
-            fontFamily: 'Courier New, monospace',
-            backgroundColor: '#003300', // Active state - green background
-            padding: { x: 20, y: 10 },
-            stroke: '#00ff00',
-            strokeThickness: 2
-        });
-        jsButton.setOrigin(0.5, 0);
-        jsButton.setInteractive({ useHandCursor: true });
-        jsButton.setDepth(10002); // Very high depth to ensure visibility
-        jsButton.setScrollFactor(0); // Don't scroll
-        jsButton.on('pointerdown', () => this.switchLanguage('javascript'));
-        jsButton.on('pointerover', () => {
-            jsButton.setStyle({ backgroundColor: '#004400', strokeThickness: 3 });
-        });
-        jsButton.on('pointerout', () => {
-            if (this.currentLanguage === 'javascript') {
-                jsButton.setStyle({ backgroundColor: '#003300', strokeThickness: 2 });
-            } else {
-                jsButton.setStyle({ backgroundColor: '#000000', strokeThickness: 1 });
-            }
-        });
-
-        // Python button - inactive by default
-        const pythonButton = this.add.text(x + 90, buttonY + 30,
-            '[ PYTHON ]', {
-            fontSize: '20px',
-            color: '#00ff00', // Bright green
-            fontFamily: 'Courier New, monospace',
-            backgroundColor: '#000000', // Inactive state
-            padding: { x: 20, y: 10 },
-            stroke: '#00ff00',
-            strokeThickness: 1
-        });
-        pythonButton.setOrigin(0.5, 0);
-        pythonButton.setInteractive({ useHandCursor: true });
-        pythonButton.setDepth(10002); // Very high depth to ensure visibility
-        pythonButton.setScrollFactor(0); // Don't scroll
-        pythonButton.on('pointerdown', () => this.switchLanguage('python'));
-        pythonButton.on('pointerover', () => {
-            pythonButton.setStyle({ backgroundColor: '#004400', strokeThickness: 3 });
-        });
-        pythonButton.on('pointerout', () => {
-            if (this.currentLanguage === 'python') {
-                pythonButton.setStyle({ backgroundColor: '#003300', strokeThickness: 2 });
-            } else {
-                pythonButton.setStyle({ backgroundColor: '#000000', strokeThickness: 1 });
-            }
-        });
-
-        // Store reference to language badge for updates
-        this.languageBadge = jsButton;
-
-        // Store both buttons for toggling active state
-        (jsButton as any).pythonButton = pythonButton;
-
-        // Debug logging
-        console.log('Language selector created:', {
-            labelPos: { x: langLabel.x, y: langLabel.y },
-            jsButtonPos: { x: jsButton.x, y: jsButton.y },
-            pythonButtonPos: { x: pythonButton.x, y: pythonButton.y },
-            jsDepth: jsButton.depth,
-            pythonDepth: pythonButton.depth,
-            jsVisible: jsButton.visible,
-            pythonVisible: pythonButton.visible
-        });
-
         // Monaco editor will be mounted here as DOM element
-        // We'll create the DOM container but not add visual elements in Phaser
     }
 
     private initializeMonacoEditor() {
-        // Initialize starter code for both languages
-        const jsCode = this.problem.starterCode || this.getDefaultStarterCode('javascript');
-        const pythonCode = this.problem.starterCodePython || this.getDefaultStarterCode('python');
-        
-        console.log('Initializing Monaco editor:', {
-            hasStarterCode: !!this.problem.starterCode,
+        // Initialize Python starter code
+        const pythonCode = this.problem.starterCodePython || this.getDefaultStarterCode();
+
+        console.log('Initializing Monaco editor (Python only):', {
             hasStarterCodePython: !!this.problem.starterCodePython,
-            jsCode,
             pythonCode,
             functionName: this.problem.functionName
         });
-        
-        this.codeByLanguage.set('javascript', jsCode);
-        this.codeByLanguage.set('python', pythonCode);
 
         // Create DOM element for Monaco editor - matrix style
         this.editorContainer = document.createElement('div');
@@ -377,10 +275,10 @@ export class LeetCodeChallenge extends Scene {
 
         document.body.appendChild(this.editorContainer);
 
-        // Initialize Monaco editor with validation disabled to avoid worker errors
+        // Initialize Monaco editor with Python
         const model = monaco.editor.createModel(
-            this.codeByLanguage.get('javascript')!,
-            'javascript'
+            pythonCode,
+            'python'
         );
 
         // Create custom matrix theme
@@ -547,145 +445,21 @@ export class LeetCodeChallenge extends Scene {
         this.updateMonacoPosition();
     }
 
-    private getDefaultStarterCode(language: 'javascript' | 'python'): string {
-        if (language === 'python') {
-            // Convert camelCase to snake_case for Python
-            const pythonFunctionName = this.problem.functionName.replace(/([A-Z])/g, '_$1').toLowerCase();
-            return `def ${pythonFunctionName}(${this.problem.parameters.join(', ')}):\n    # Write your solution here\n    pass\n`;
-        } else {
-            return `var ${this.problem.functionName} = function(${this.problem.parameters.join(', ')}) {\n    // Write your solution here\n    \n};\n`;
-        }
-    }
-
-    private switchLanguage(language: 'javascript' | 'python') {
-        if (language === this.currentLanguage) return;
-
-        // Save current code before switching
-        this.codeByLanguage.set(this.currentLanguage, this.editor.getValue());
-
-        // Update language
-        this.currentLanguage = language;
-
-        // Get code for new language
-        // Always check if we have saved code first, but if it's empty or just whitespace, use starter code
-        let newCode = this.codeByLanguage.get(language);
-        const savedCodeIsEmpty = !newCode || newCode.trim() === '' || 
-                                 (language === 'python' && newCode.includes('function')) ||
-                                 (language === 'javascript' && newCode.includes('def '));
-        
-        if (!newCode || savedCodeIsEmpty) {
-            // If no saved code or it looks like wrong language, use starter code or default
-            newCode = (language === 'python' 
-                ? this.problem.starterCodePython 
-                : this.problem.starterCode) || this.getDefaultStarterCode(language);
-            this.codeByLanguage.set(language, newCode);
-        }
-
-        console.log(`Switching to ${language}:`, {
-            newCode,
-            newCodePreview: newCode?.substring(0, 100),
-            hasStarterCodePython: !!this.problem.starterCodePython,
-            starterCodePythonPreview: this.problem.starterCodePython?.substring(0, 100),
-            hasStarterCode: !!this.problem.starterCode,
-            problemFunctionName: this.problem.functionName
-        });
-
-        // Update Monaco editor - set language first, then value
-        const model = this.editor.getModel();
-        if (model) {
-            // Set the value first
-            this.editor.setValue(newCode || '');
-            
-            // Then set the language
-            monaco.editor.setModelLanguage(model, language);
-            
-            // Force a layout update to ensure the editor refreshes
-            this.editor.layout();
-            
-            // Force editor to update display
-            requestAnimationFrame(() => {
-                this.editor.layout();
-                console.log('Editor updated (after animation frame):', {
-                    currentValue: this.editor.getValue().substring(0, 100),
-                    modelLanguage: model.getLanguageId(),
-                    expectedLanguage: language
-                });
-            });
-            
-            console.log('Editor updated:', {
-                currentValue: this.editor.getValue().substring(0, 100),
-                modelLanguage: model.getLanguageId(),
-                expectedLanguage: language
-            });
-        } else {
-            console.error('Editor model is null!');
-            this.editor.setValue(newCode || '');
-        }
-
-        // Update UI - toggle button states
-        const jsButton = this.languageBadge;
-        const pythonButton = (jsButton as any).pythonButton;
-
-        if (language === 'javascript') {
-            jsButton.setText('[ JAVASCRIPT ] ✓');
-            jsButton.setStyle({
-                fontSize: '20px',
-                color: '#00ff00',
-                backgroundColor: '#003300',
-                padding: { x: 20, y: 10 },
-                stroke: '#00ff00',
-                strokeThickness: 2
-            });
-            pythonButton.setText('[ PYTHON ]');
-            pythonButton.setStyle({
-                fontSize: '20px',
-                color: '#00ff00',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 10 },
-                stroke: '#00ff00',
-                strokeThickness: 1
-            });
-        } else {
-            jsButton.setText('[ JAVASCRIPT ]');
-            jsButton.setStyle({
-                fontSize: '20px',
-                color: '#00ff00',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 10 },
-                stroke: '#00ff00',
-                strokeThickness: 1
-            });
-            pythonButton.setText('[ PYTHON ] ✓');
-            pythonButton.setStyle({
-                fontSize: '20px',
-                color: '#00ff00',
-                backgroundColor: '#003300',
-                padding: { x: 20, y: 10 },
-                stroke: '#00ff00',
-                strokeThickness: 2
-            });
-        }
-
-        console.log(`Switched to ${language}`);
+    private getDefaultStarterCode(): string {
+        // Convert camelCase to snake_case for Python
+        const pythonFunctionName = this.problem.functionName.replace(/([A-Z])/g, '_$1').toLowerCase();
+        return `def ${pythonFunctionName}(${this.problem.parameters.join(', ')}):\n    # Write your solution here\n    pass\n`;
     }
 
     private createControlButtons(x: number, y: number) {
-        // Run Tests button - cyan/green matrix style
-        this.createButton(x - 300, y, '> RUN TESTS', 0x00ff00, () => this.runTests());
+        // Run Tests button - green matrix style
+        this.createButton(x - 200, y, '> RUN TESTS', 0x00ff00, () => this.runTests());
 
         // Submit button - bright green matrix style
-        this.createButton(x - 100, y, '> SUBMIT', 0x00ff00, () => this.submitSolution());
+        this.createButton(x, y, '> SUBMIT', 0x00ff00, () => this.submitSolution());
 
         // Skip button - red warning style
-        this.createButton(x + 100, y, '> SKIP', 0xff0000, () => this.skipProblem());
-
-        // Close button - gray terminal style
-        this.createButton(x + 300, y, '> CLOSE (ESC)', 0x00ff00, () => this.closeChallenge());
-
-        // Setup keyboard shortcuts
-        this.input.keyboard?.on('keydown-ESC', () => {
-            this.closeChallenge();
-        });
+        this.createButton(x + 200, y, '> SKIP', 0xff0000, () => this.skipProblem());
     }
 
     private createButton(x: number, y: number, text: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
@@ -930,41 +704,21 @@ export class LeetCodeChallenge extends Scene {
 
         if (confirmSkip) {
             console.log('Problem skipped with -100 points penalty');
-            // TODO: Deduct points from player score
+
+            // Emit event to Game scene to deduct points
+            const gameScene = this.scene.get('Game') as any;
+            if (gameScene && gameScene.deductScore) {
+                gameScene.deductScore(100);
+            }
+
             this.closeChallenge();
         }
     }
 
     private evaluateUserCode(code: string): Function {
-        // Create a safe evaluation context
-        // Extract the function from the code
+        // Python-only: transpile Python code to JavaScript
         try {
-            if (this.currentLanguage === 'python') {
-                // For Python, we need to transpile or use a Python runtime
-                // Using Brython or Pyodide would be ideal, but for now we'll convert simple Python to JS
-                return this.transpilePythonToJS(code);
-            } else {
-                // JavaScript evaluation - handle different function declaration formats
-                const functionName = this.problem.functionName;
-                
-                // Wrap code in an IIFE to create isolated scope and return the function
-                const evalCode = `
-                    (function() {
-                        ${code}
-                        // Return the function (works for var, let, const, and function declarations)
-                        return ${functionName};
-                    })();
-                `;
-                
-                const fn = new Function('return ' + evalCode);
-                const result = fn();
-                
-                if (typeof result !== 'function') {
-                    throw new Error(`Expected ${functionName} to be a function, but got ${typeof result}`);
-                }
-                
-                return result;
-            }
+            return this.transpilePythonToJS(code);
         } catch (error) {
             throw new Error(`Compilation error: ${error instanceof Error ? error.message : String(error)}`);
         }
