@@ -40,7 +40,7 @@
 **Core Features:**
 - Endless procedural corridor generation
 - Auto-run with jump/slide mechanics
-- 3 tiers of coding challenges (Easy/Medium/Hard linked to diamond colors)
+- 3 tiers of coding challenges (Easy/Medium/Hard linked to diamond colors)x
 - JavaScript code execution with Monaco Editor integration
 - Quick-time event recovery system for failed obstacles
 - Global leaderboard (distance + weighted diamond score)

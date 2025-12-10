@@ -236,6 +236,7 @@ export class LeetCodeChallenge extends Scene {
         // Panel background - very dark with green border
         const panelBg = this.add.rectangle(x, y, width, height, 0x0a0a0a);
         panelBg.setStrokeStyle(1, 0x00ff00, 0.3);
+        panelBg.setDepth(1); // Lower depth so it stays behind
 
         // Editor title - matrix style
         const editorTitle = this.add.text(x, topY,
@@ -248,70 +249,80 @@ export class LeetCodeChallenge extends Scene {
             strokeThickness: 0.5
         });
         editorTitle.setOrigin(0.5, 0);
+        editorTitle.setDepth(10002); // High depth for visibility
 
         // Language selector buttons - matrix terminal style
-        // Position buttons prominently above the editor, centered
-        const buttonY = topY + 35;
-        
+        // Position buttons prominently at the very top of the panel
+        const buttonY = topY + 30;
+
+        // Create a background panel for language selector for better visibility
+        const selectorBg = this.add.rectangle(x, buttonY + 50, width - 40, 70, 0x001a00, 0.8);
+        selectorBg.setStrokeStyle(2, 0x00ff41, 0.8);
+        selectorBg.setDepth(9999);
+
         // Language label
-        const langLabel = this.add.text(x, buttonY, 'Language:', {
+        const langLabel = this.add.text(x, buttonY, '>>> SELECT LANGUAGE <<<', {
             fontSize: '14px',
             color: '#00ff41',
             fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold'
+            fontStyle: 'bold',
+            stroke: '#00ff41',
+            strokeThickness: 1
         });
         langLabel.setOrigin(0.5, 0);
-        langLabel.setDepth(10001);
-        
+        langLabel.setDepth(10002);
+
         // JavaScript button - active by default
-        const jsButton = this.add.text(x - 70, buttonY + 25,
-            '[JavaScript] ✓', {
-            fontSize: '18px',
-            color: '#00ff41', // Bright neon green
+        const jsButton = this.add.text(x - 90, buttonY + 30,
+            '[ JAVASCRIPT ] ✓', {
+            fontSize: '20px',
+            color: '#00ff00', // Bright green
             fontFamily: 'Courier New, monospace',
-            backgroundColor: '#001a00', // Active state - darker green background
-            padding: { x: 15, y: 8 },
-            stroke: '#00ff41', // Bright neon green stroke
-            strokeThickness: 4 // Very thick stroke for visibility
+            backgroundColor: '#003300', // Active state - green background
+            padding: { x: 20, y: 10 },
+            stroke: '#00ff00',
+            strokeThickness: 2
         });
         jsButton.setOrigin(0.5, 0);
         jsButton.setInteractive({ useHandCursor: true });
-        jsButton.setDepth(10001); // Very high depth to ensure visibility
+        jsButton.setDepth(10002); // Very high depth to ensure visibility
+        jsButton.setScrollFactor(0); // Don't scroll
         jsButton.on('pointerdown', () => this.switchLanguage('javascript'));
         jsButton.on('pointerover', () => {
-            jsButton.setStyle({ backgroundColor: '#003300', strokeThickness: 5 });
+            jsButton.setStyle({ backgroundColor: '#004400', strokeThickness: 3 });
         });
         jsButton.on('pointerout', () => {
             if (this.currentLanguage === 'javascript') {
-                jsButton.setStyle({ backgroundColor: '#001a00', strokeThickness: 4 }); // Keep active state
+                jsButton.setStyle({ backgroundColor: '#003300', strokeThickness: 2 });
             } else {
-                jsButton.setStyle({ backgroundColor: '#000000', strokeThickness: 3 });
+                jsButton.setStyle({ backgroundColor: '#000000', strokeThickness: 1 });
             }
         });
 
         // Python button - inactive by default
-        const pythonButton = this.add.text(x + 70, buttonY + 25,
-            '[Python]', {
-            fontSize: '18px',
-            color: '#00ff41', // Bright neon green
+        const pythonButton = this.add.text(x + 90, buttonY + 30,
+            '[ PYTHON ]', {
+            fontSize: '20px',
+            color: '#00ff00', // Bright green
             fontFamily: 'Courier New, monospace',
             backgroundColor: '#000000', // Inactive state
-            padding: { x: 15, y: 8 },
-            stroke: '#00ff41', // Bright neon green stroke
-            strokeThickness: 4 // Very thick stroke for visibility
+            padding: { x: 20, y: 10 },
+            stroke: '#00ff00',
+            strokeThickness: 1
         });
         pythonButton.setOrigin(0.5, 0);
         pythonButton.setInteractive({ useHandCursor: true });
-        pythonButton.setDepth(10001); // Very high depth to ensure visibility
+        pythonButton.setDepth(10002); // Very high depth to ensure visibility
+        pythonButton.setScrollFactor(0); // Don't scroll
         pythonButton.on('pointerdown', () => this.switchLanguage('python'));
         pythonButton.on('pointerover', () => {
-            pythonButton.setStyle({ backgroundColor: '#003300', strokeThickness: 5 });
+            pythonButton.setStyle({ backgroundColor: '#004400', strokeThickness: 3 });
         });
         pythonButton.on('pointerout', () => {
             if (this.currentLanguage === 'python') {
-                pythonButton.setStyle({ backgroundColor: '#001a00', strokeThickness: 4 }); // Keep active state
+                pythonButton.setStyle({ backgroundColor: '#003300', strokeThickness: 2 });
             } else {
-                pythonButton.setStyle({ backgroundColor: '#000000', strokeThickness: 3 });
+                pythonButton.setStyle({ backgroundColor: '#000000', strokeThickness: 1 });
             }
         });
 
@@ -320,6 +331,17 @@ export class LeetCodeChallenge extends Scene {
 
         // Store both buttons for toggling active state
         (jsButton as any).pythonButton = pythonButton;
+
+        // Debug logging
+        console.log('Language selector created:', {
+            labelPos: { x: langLabel.x, y: langLabel.y },
+            jsButtonPos: { x: jsButton.x, y: jsButton.y },
+            pythonButtonPos: { x: pythonButton.x, y: pythonButton.y },
+            jsDepth: jsButton.depth,
+            pythonDepth: pythonButton.depth,
+            jsVisible: jsButton.visible,
+            pythonVisible: pythonButton.visible
+        });
 
         // Monaco editor will be mounted here as DOM element
         // We'll create the DOM container but not add visual elements in Phaser
@@ -336,10 +358,11 @@ export class LeetCodeChallenge extends Scene {
         this.editorContainer.style.position = 'absolute';
         this.editorContainer.style.border = '2px solid #00ff00';
         this.editorContainer.style.backgroundColor = '#000000';
-        this.editorContainer.style.zIndex = '10'; // Lower z-index so it doesn't block Phaser buttons
+        this.editorContainer.style.zIndex = '5'; // Lower than Phaser buttons (10001+)
         this.editorContainer.style.display = 'block';
-        this.editorContainer.style.pointerEvents = 'none'; // Let clicks pass through to canvas by default
-        this.editorContainer.style.overflow = 'hidden'; // Prevent overflow from covering buttons
+        this.editorContainer.style.pointerEvents = 'none'; // Container non-interactive
+        this.editorContainer.style.overflow = 'hidden'; // Critical: prevent overflow
+        this.editorContainer.style.boxSizing = 'border-box';
 
         document.body.appendChild(this.editorContainer);
 
@@ -387,15 +410,27 @@ export class LeetCodeChallenge extends Scene {
         });
 
         // Enable pointer events on the Monaco editor itself so it's interactive
-        const monacoDOM = this.editorContainer.querySelector('.monaco-editor');
-        if (monacoDOM) {
-            (monacoDOM as HTMLElement).style.pointerEvents = 'auto';
-            // Ensure Monaco editor doesn't overflow and cover buttons
-            (monacoDOM as HTMLElement).style.overflow = 'hidden';
-        }
-        
-        // Also ensure the editor container itself doesn't cover buttons by limiting its height
-        // This will be handled in updateMonacoPosition
+        // Use a small delay to ensure Monaco has fully initialized
+        setTimeout(() => {
+            const monacoDOM = this.editorContainer.querySelector('.monaco-editor');
+            if (monacoDOM) {
+                (monacoDOM as HTMLElement).style.pointerEvents = 'auto';
+                (monacoDOM as HTMLElement).style.overflow = 'hidden';
+                (monacoDOM as HTMLElement).style.boxSizing = 'border-box';
+            }
+
+            // Also enable pointer events on scrollbars and other interactive elements
+            const scrollbars = this.editorContainer.querySelectorAll('.monaco-scrollable-element');
+            scrollbars.forEach((el) => {
+                (el as HTMLElement).style.pointerEvents = 'auto';
+            });
+
+            // Enable pointer events on the view lines (where you actually type)
+            const viewLines = this.editorContainer.querySelector('.view-lines');
+            if (viewLines) {
+                (viewLines as HTMLElement).style.pointerEvents = 'auto';
+            }
+        }, 100);
 
         // Disable validation to prevent worker issues
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
@@ -443,20 +478,24 @@ export class LeetCodeChallenge extends Scene {
 
         // Calculate panel dimensions in game coordinates
         const centerY = this.scale.height / 2;
-        const panelWidth = this.scale.width - 100;
-        const panelHeight = this.scale.height - 100;
-        const columnWidth = panelWidth / 2 - 40;
+        const panelWidth = this.scale.width - 80;
+        const panelHeight = this.scale.height - 80;
+        const columnWidth = panelWidth / 2 - 50;
 
         // Calculate Monaco editor position in game coordinates
-        const gameLeftOffset = (this.scale.width - panelWidth) / 2 + panelWidth / 2 + 20;
-        const gameTopOffset = (this.scale.height - panelHeight) / 2 + 80;
+        // Right column starts at center
+        const gameLeftOffset = this.scale.width / 2 + 45;
 
-        // Calculate where buttons are in game coordinates
-        const buttonsY = centerY + panelHeight / 2 - 50;
+        // Top offset - leave space for title and language selector
+        // ADJUST THIS NUMBER to move Monaco editor up/down (higher = lower on screen)
+        const gameTopOffset = (this.scale.height - panelHeight) / 2 + 220;
 
-        // Monaco should end 120px before the buttons (with margin)
-        const monacoEndY = buttonsY - 120;
-        const monacoHeight = monacoEndY - gameTopOffset;
+        // Calculate where control buttons are in game coordinates
+        const buttonsY = centerY + panelHeight / 2 - 60;
+
+        // Monaco should end well before the buttons (150px margin for safety)
+        const monacoEndY = buttonsY - 150;
+        const monacoHeight = Math.max(200, monacoEndY - gameTopOffset);
 
         // Get scale factors
         const scaleX = canvasRect.width / this.scale.width;
@@ -465,7 +504,7 @@ export class LeetCodeChallenge extends Scene {
         // Convert game coordinates to screen coordinates
         const screenLeft = canvasRect.left + (gameLeftOffset * scaleX);
         const screenTop = canvasRect.top + (gameTopOffset * scaleY);
-        const screenWidth = (columnWidth - 30) * scaleX;
+        const screenWidth = (columnWidth - 40) * scaleX;
         const screenHeight = monacoHeight * scaleY;
 
         // Update Monaco editor position
@@ -473,12 +512,13 @@ export class LeetCodeChallenge extends Scene {
         this.editorContainer.style.top = `${screenTop}px`;
         this.editorContainer.style.width = `${screenWidth}px`;
         this.editorContainer.style.height = `${screenHeight}px`;
-        
+
         // Ensure editor container doesn't extend beyond its bounds and block buttons
         this.editorContainer.style.overflow = 'hidden';
         this.editorContainer.style.maxHeight = `${screenHeight}px`;
-        
-        // Re-apply pointer events: container is 'none', but Monaco editor inside is 'auto'
+        this.editorContainer.style.boxSizing = 'border-box';
+
+        // Critical: container pointer events none, but Monaco inside is auto
         this.editorContainer.style.pointerEvents = 'none';
 
         console.log('Monaco editor bounds:', {
@@ -487,7 +527,8 @@ export class LeetCodeChallenge extends Scene {
             width: screenWidth,
             height: screenHeight,
             bottom: screenTop + screenHeight,
-            buttonsStartY: canvasRect.top + (buttonsY * scaleY)
+            buttonsStartY: canvasRect.top + (buttonsY * scaleY),
+            clearance: (canvasRect.top + (buttonsY * scaleY)) - (screenTop + screenHeight)
         });
     }
 
@@ -526,42 +567,42 @@ export class LeetCodeChallenge extends Scene {
         const pythonButton = (jsButton as any).pythonButton;
 
         if (language === 'javascript') {
-            jsButton.setText('[JavaScript] ✓');
+            jsButton.setText('[ JAVASCRIPT ] ✓');
             jsButton.setStyle({
-                fontSize: '16px',
-                color: '#00ff41', // Bright neon green
-                backgroundColor: '#001a00',
-                padding: { x: 12, y: 6 },
-                stroke: '#00ff41',
-                strokeThickness: 3
+                fontSize: '20px',
+                color: '#00ff00',
+                backgroundColor: '#003300',
+                padding: { x: 20, y: 10 },
+                stroke: '#00ff00',
+                strokeThickness: 2
             });
-            pythonButton.setText('[Python]');
+            pythonButton.setText('[ PYTHON ]');
             pythonButton.setStyle({
-                fontSize: '16px',
-                color: '#00ff41', // Bright neon green
+                fontSize: '20px',
+                color: '#00ff00',
                 backgroundColor: '#000000',
-                padding: { x: 12, y: 6 },
-                stroke: '#00ff41',
-                strokeThickness: 3
+                padding: { x: 20, y: 10 },
+                stroke: '#00ff00',
+                strokeThickness: 1
             });
         } else {
-            jsButton.setText('[JavaScript]');
+            jsButton.setText('[ JAVASCRIPT ]');
             jsButton.setStyle({
-                fontSize: '16px',
-                color: '#00ff41', // Bright neon green
+                fontSize: '20px',
+                color: '#00ff00',
                 backgroundColor: '#000000',
-                padding: { x: 12, y: 6 },
-                stroke: '#00ff41',
-                strokeThickness: 3
+                padding: { x: 20, y: 10 },
+                stroke: '#00ff00',
+                strokeThickness: 1
             });
-            pythonButton.setText('[Python] ✓');
+            pythonButton.setText('[ PYTHON ] ✓');
             pythonButton.setStyle({
-                fontSize: '16px',
-                color: '#00ff41', // Bright neon green
-                backgroundColor: '#001a00',
-                padding: { x: 12, y: 6 },
-                stroke: '#00ff41',
-                strokeThickness: 3
+                fontSize: '20px',
+                color: '#00ff00',
+                backgroundColor: '#003300',
+                padding: { x: 20, y: 10 },
+                stroke: '#00ff00',
+                strokeThickness: 2
             });
         }
 
@@ -596,6 +637,7 @@ export class LeetCodeChallenge extends Scene {
         bg.setStrokeStyle(2, color);
         bg.setInteractive({ useHandCursor: true });
         bg.setDepth(10001);
+        bg.setScrollFactor(0); // Don't scroll with camera
         button.add(bg);
 
         // Button label - matrix terminal style
@@ -608,6 +650,8 @@ export class LeetCodeChallenge extends Scene {
             strokeThickness: 0.5
         });
         label.setOrigin(0.5);
+        label.setDepth(10001);
+        label.setScrollFactor(0); // Don't scroll with camera
         button.add(label);
 
         // Click handler - prevent default browser behavior
@@ -648,12 +692,19 @@ export class LeetCodeChallenge extends Scene {
             const results = this.problem.testCases.map((testCase) => {
                 try {
                     const startTime = performance.now();
-                    // Handle input - if it's already an array, wrap it; if not, use as is
-                    const args = Array.isArray(testCase.input) && !Array.isArray(testCase.input[0])
-                        ? [testCase.input]
-                        : Array.isArray(testCase.input)
-                        ? testCase.input
-                        : [testCase.input];
+                    // Handle input - spread array if it matches parameter count, otherwise wrap
+                    let args: any[];
+                    if (Array.isArray(testCase.input)) {
+                        // If input array length matches parameter count, spread it as arguments
+                        // Otherwise, pass the array as a single argument
+                        if (testCase.input.length === this.problem.parameters.length) {
+                            args = testCase.input;
+                        } else {
+                            args = [testCase.input];
+                        }
+                    } else {
+                        args = [testCase.input];
+                    }
 
                     const actual = userFunction(...args);
                     const executionTime = performance.now() - startTime;
@@ -705,12 +756,19 @@ export class LeetCodeChallenge extends Scene {
             const results = allTests.map(testCase => {
                 try {
                     const startTime = performance.now();
-                    // Handle input - if it's already an array, wrap it; if not, use as is
-                    const args = Array.isArray(testCase.input) && !Array.isArray(testCase.input[0])
-                        ? [testCase.input]
-                        : Array.isArray(testCase.input)
-                        ? testCase.input
-                        : [testCase.input];
+                    // Handle input - spread array if it matches parameter count, otherwise wrap
+                    let args: any[];
+                    if (Array.isArray(testCase.input)) {
+                        // If input array length matches parameter count, spread it as arguments
+                        // Otherwise, pass the array as a single argument
+                        if (testCase.input.length === this.problem.parameters.length) {
+                            args = testCase.input;
+                        } else {
+                            args = [testCase.input];
+                        }
+                    } else {
+                        args = [testCase.input];
+                    }
 
                     const actual = userFunction(...args);
                     const executionTime = performance.now() - startTime;
@@ -870,14 +928,23 @@ export class LeetCodeChallenge extends Scene {
             const lines = pythonCode.split('\n').slice(1);
             let body = '';
 
+            // Find the minimum indentation level (to handle any indentation style)
+            const nonEmptyLines = lines.filter(line => line.trim().length > 0 && !line.trim().startsWith('#'));
+            const minIndent = nonEmptyLines.length > 0
+                ? Math.min(...nonEmptyLines.map(line => {
+                    const match = line.match(/^(\s*)/);
+                    return match ? match[1].length : 0;
+                }))
+                : 0;
+
             for (const line of lines) {
                 if (line.trim() === '' || line.trim().startsWith('#')) continue;
 
                 // Skip pass statements
                 if (line.trim() === 'pass') continue;
 
-                // Remove leading indentation (4 spaces or 1 tab)
-                const dedented = line.replace(/^(\s{4}|\t)/, '');
+                // Remove the minimum indentation from all lines
+                const dedented = line.substring(minIndent);
 
                 // Basic Python to JS conversions
                 let jsLine = dedented
@@ -909,6 +976,14 @@ export class LeetCodeChallenge extends Scene {
                     ${body}
                 };
             `;
+
+            console.log('Python transpilation:', {
+                originalPython: pythonCode,
+                functionName,
+                params,
+                body,
+                generatedJS: jsCode
+            });
 
             const fn = new Function(jsCode);
             return fn();

@@ -237,8 +237,19 @@ export class Game extends Scene
         // Pause the game
         this.scene.pause();
 
-        // Load the problem data
-        const problem = this.cache.json.get('problem_contains_duplicate');
+        // Load the problem data based on challengeId
+        const challenges = this.cache.json.get('challenges');
+        const challenge = challenges.challenges.find((c: any) => c.id === challengeId);
+
+        if (!challenge) {
+            console.error(`Challenge not found: ${challengeId}`);
+            this.isDiamondPaused = false;
+            this.scene.resume();
+            return;
+        }
+
+        // Convert challenge data to LeetCodeProblem format
+        const problem = this.convertChallengeToProblem(challenge, tier);
 
         // Launch LeetCode Challenge Scene
         this.scene.launch('LeetCodeChallenge', {
@@ -355,6 +366,96 @@ export class Game extends Scene
             this.pauseOverlay.destroy();
             this.pauseOverlay = null as any;
         }
+    }
+
+    private convertChallengeToProblem(challenge: any, tier: string): any {
+        // Convert snake_case to camelCase for function name
+        const functionName = this.snakeToCamel(challenge.functionName);
+
+        // Map tier to difficulty
+        const difficultyMap: { [key: string]: { level: number, label: string } } = {
+            'white': { level: 1, label: 'Easy' },
+            'blue': { level: 5, label: 'Medium' },
+            'black': { level: 9, label: 'Hard' }
+        };
+
+        const difficulty = difficultyMap[tier] || { level: 1, label: 'Easy' };
+
+        // Extract problem number from ID (e.g., "white_01" -> 1)
+        const numberMatch = challenge.id.match(/_(\d+)$/);
+        const problemNumber = numberMatch ? parseInt(numberMatch[1]) : 1;
+
+        // Convert simple test cases to detailed examples
+        const examples = challenge.testCases.slice(0, 2).map((tc: any, index: number) => ({
+            input: Array.isArray(tc.input)
+                ? `[${tc.input.map((v: any) => JSON.stringify(v)).join(', ')}]`
+                : JSON.stringify(tc.input),
+            output: JSON.stringify(tc.expected),
+            explanation: index === 0 ? challenge.example : undefined
+        }));
+
+        // Generate constraints based on test cases
+        const constraints = [
+            'Follow the function signature provided',
+            'Handle all test cases correctly',
+            'Consider edge cases'
+        ];
+
+        // Generate starter code
+        const parameters = this.extractParameters(challenge.testCases[0]?.input);
+        const starterCode = `var ${functionName} = function(${parameters.join(', ')}) {\n    // Write your solution here\n    \n};`;
+        const starterCodePython = `def ${challenge.functionName}(${parameters.join(', ')}):\n    # Write your solution here\n    pass`;
+
+        return {
+            id: challenge.id,
+            number: problemNumber,
+            title: challenge.title,
+            difficulty: difficulty.level,
+            leetcodeDifficulty: difficulty.label,
+            topic: this.inferTopic(challenge.title, challenge.description),
+            topics: [this.inferTopic(challenge.title, challenge.description)],
+            description: challenge.description,
+            examples: examples,
+            constraints: constraints,
+            hints: [],
+            functionName: functionName,
+            functionSignature: `@param varies\n@return varies`,
+            parameters: parameters,
+            returnType: 'any',
+            starterCode: starterCode,
+            starterCodePython: starterCodePython,
+            testCases: challenge.testCases,
+            hiddenTestCases: [],
+            reward: challenge.reward,
+            companies: []
+        };
+    }
+
+    private snakeToCamel(str: string): string {
+        return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    }
+
+    private extractParameters(input: any): string[] {
+        if (Array.isArray(input)) {
+            return input.map((_, index) => String.fromCharCode(97 + index)); // a, b, c, ...
+        }
+        return ['n'];
+    }
+
+    private inferTopic(title: string, description: string): string {
+        const text = (title + ' ' + description).toLowerCase();
+
+        if (text.includes('array') || text.includes('list')) return 'Arrays';
+        if (text.includes('string')) return 'Strings';
+        if (text.includes('hash') || text.includes('duplicate')) return 'Hash Table';
+        if (text.includes('binary') || text.includes('search')) return 'Binary Search';
+        if (text.includes('sort')) return 'Sorting';
+        if (text.includes('parenthes')) return 'Stack';
+        if (text.includes('fibonacci') || text.includes('factorial')) return 'Recursion';
+        if (text.includes('path') || text.includes('subsequence')) return 'Dynamic Programming';
+        if (text.includes('word') || text.includes('regex')) return 'String Matching';
+
+        return 'General';
     }
 
     changeScene ()
