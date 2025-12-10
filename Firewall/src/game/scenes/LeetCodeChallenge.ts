@@ -1,13 +1,14 @@
 import { Scene } from 'phaser';
 import { LeetCodeProblem, TestResult } from '../types/LeetCodeTypes';
-import type * as Monaco from 'monaco-editor';
+
+// Monaco is loaded from CDN as a global variable
+declare const monaco: any;
 
 export class LeetCodeChallenge extends Scene {
     private problem!: LeetCodeProblem;
     private distanceTraveled!: number;
-    private editor!: Monaco.editor.IStandaloneCodeEditor;
+    private editor!: any;
     private editorContainer!: HTMLElement;
-    private monaco!: typeof Monaco;
     private failedAttempts: number = 0;
     private readonly MAX_ATTEMPTS: number = 3;
 
@@ -255,9 +256,12 @@ export class LeetCodeChallenge extends Scene {
         // Monaco editor will be mounted here as DOM element
     }
 
-    private async initializeMonacoEditor() {
-        // Dynamically import Monaco Editor
-        this.monaco = await import('monaco-editor');
+    private initializeMonacoEditor() {
+        // Check if Monaco is loaded from CDN
+        if (typeof monaco === 'undefined') {
+            console.error('Monaco Editor not loaded from CDN');
+            return;
+        }
 
         // Initialize Python starter code
         const pythonCode = this.problem.starterCodePython || this.getDefaultStarterCode();
@@ -283,13 +287,13 @@ export class LeetCodeChallenge extends Scene {
         document.body.appendChild(this.editorContainer);
 
         // Initialize Monaco editor with Python
-        const model = this.monaco.editor.createModel(
+        const model = monaco.editor.createModel(
             pythonCode,
             'python'
         );
 
         // Create custom matrix theme
-        this.monaco.editor.defineTheme('firewall-matrix', {
+        monaco.editor.defineTheme('firewall-matrix', {
             base: 'vs-dark',
             inherit: true,
             rules: [
@@ -311,7 +315,7 @@ export class LeetCodeChallenge extends Scene {
             }
         });
 
-        this.editor = this.monaco.editor.create(this.editorContainer, {
+        this.editor = monaco.editor.create(this.editorContainer, {
             model: model,
             theme: 'firewall-matrix',
             automaticLayout: true,
@@ -349,12 +353,12 @@ export class LeetCodeChallenge extends Scene {
         }, 100);
 
         // Disable validation to prevent worker issues
-        this.monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
             noSemanticValidation: true,
             noSyntaxValidation: true
         });
 
-        this.monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
             noSemanticValidation: true,
             noSyntaxValidation: true
         });
