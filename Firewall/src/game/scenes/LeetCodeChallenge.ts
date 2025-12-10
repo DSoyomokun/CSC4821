@@ -1094,6 +1094,12 @@ export class LeetCodeChallenge extends Scene {
                     jsLine = jsLine.replace(/len\(([^)]+)\)/g, '$1.length');
                 }
 
+                // Handle .append() → .push()
+                jsLine = jsLine.replace(/\.append\(/g, '.push(');
+
+                // Handle .remove() → .delete() for sets (note: lists use splice, but sets are more common in LeetCode)
+                jsLine = jsLine.replace(/\.remove\(/g, '.delete(');
+
                 body += jsLine + '\n';
                 lastIndentLevel = relativeIndent;
             }
