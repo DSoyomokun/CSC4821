@@ -16,7 +16,7 @@ export class Diamond {
     public challengeId: string;
 
     // Visual elements
-    private rectangle: Phaser.GameObjects.Rectangle;
+    private image: Phaser.GameObjects.Image;
 
     constructor(
         scene: Scene,
@@ -35,9 +35,11 @@ export class Diamond {
         // Position diamond on the ground
         this.y = groundY - 15; // Half the height of the diamond (30/2)
 
-        // Create simple rectangle sprite for diamond
-        const color = this.getTierColor();
-        this.rectangle = scene.add.rectangle(this.x, this.y, 30, 30, color);
+        // Create diamond image sprite
+        this.image = scene.add.image(this.x, this.y, 'diamond');
+        
+        // Scale the image to appropriate size (adjust as needed)
+        this.image.setScale(0.1); // Adjust scale based on your image size
 
         // Create invisible rectangle for physics (using static body to avoid gravity)
         const physicsRect = scene.add.rectangle(this.x, this.y, 30, 30);
@@ -76,21 +78,9 @@ export class Diamond {
         body.velocity.x = 0;
         body.velocity.y = 0;
 
-        this.rectangle.setPosition(this.x, this.y);
+        this.image.setPosition(this.x, this.y);
     }
 
-    private getTierColor(): number {
-        switch (this.tier) {
-            case 'white':
-                return 0xffffff; // White
-            case 'blue':
-                return 0x3498db; // Blue
-            case 'black':
-                return 0x2c3e50; // Dark gray (black would be invisible)
-            default:
-                return 0xffffff;
-        }
-    }
 
     public isOffScreen(): boolean {
         return this.x < -100;
@@ -101,15 +91,15 @@ export class Diamond {
     }
 
     public hide(): void {
-        this.rectangle.setVisible(false);
+        this.image.setVisible(false);
     }
 
     public show(): void {
-        this.rectangle.setVisible(true);
+        this.image.setVisible(true);
     }
 
     public destroy(): void {
         this.sprite.destroy();
-        this.rectangle.destroy();
+        this.image.destroy();
     }
 }

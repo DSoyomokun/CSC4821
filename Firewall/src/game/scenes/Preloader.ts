@@ -34,6 +34,7 @@ export class Preloader extends Scene
 
         this.load.image('logo', 'logo.png');
         this.load.image('star', 'star.png');
+        this.load.image('diamond', 'diamondyahoo.png');
 
         // Load player running sprite sheet (28 frames, 4x7 grid)
         this.load.spritesheet('player-run', 'player-run.png', {

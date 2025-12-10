@@ -10,19 +10,19 @@ import { LeetCodeChallenge } from './scenes/LeetCodeChallenge';
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
-    width: 1920,
-    height: 1080,
+    width: window.innerWidth,
+    height: window.innerHeight,
     parent: 'game-container',
     backgroundColor: '#0a0a1a',
     scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
     physics: {
         default: 'arcade',
         arcade: {
             gravity: { x: 0, y: 1200 }, // Vertical gravity for jump arc
-            debug: false // Disable debug visuals
+            debug: true // Enable physics debug visuals
         }
     },
     scene: [

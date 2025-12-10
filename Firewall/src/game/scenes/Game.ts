@@ -7,13 +7,14 @@ import { DiamondSpawner } from '../objects/DiamondSpawner';
 export class Game extends Scene
 {
     camera: Phaser.Cameras.Scene2D.Camera;
+    background!: Phaser.GameObjects.TileSprite;
     player!: RunnerPlayer;
     ground!: Phaser.GameObjects.Rectangle;
     lasers: Laser[] = [];
     diamondSpawner!: DiamondSpawner;
 
     // Game state
-    private scrollSpeed: number = 300; // pixels per second
+    private scrollSpeed: number = 600; // pixels per second
     private distance: number = 0;
     private readonly GROUND_Y = 900;
 
@@ -24,12 +25,18 @@ export class Game extends Scene
     // UI
     private distanceText!: Phaser.GameObjects.Text;
     private helpText!: Phaser.GameObjects.Text;
+    private scoreText!: Phaser.GameObjects.Text;
+    private score: number = 0;
 
     // Collision
     private collisionGroup!: Phaser.Physics.Arcade.Group;
     private laserCollider!: Phaser.Physics.Arcade.Collider;
     private diamondCollider!: Phaser.Physics.Arcade.Collider;
     private isDiamondPaused: boolean = false;
+    
+    // Pause state
+    private isPaused: boolean = false;
+    private pauseOverlay!: Phaser.GameObjects.Container;
 
     constructor ()
     {
@@ -40,6 +47,13 @@ export class Game extends Scene
     {
         this.camera = this.cameras.main;
         this.camera.setBackgroundColor(0x0a0a1a);
+        this.camera.setZoom(0.5); // Zoom out to show more of the game world
+        // Move camera down and to the right to show full game
+        this.camera.setScroll(400, 200);
+
+        // Create scrolling tiled background
+        this.background = this.add.tileSprite(960, 540, 1920, 1080, 'background');
+        this.background.setDepth(-100); // Behind everything
 
         // Create ground
         this.ground = this.add.rectangle(960, this.GROUND_Y, 1920, 4, 0x4a4a4a);
@@ -79,8 +93,13 @@ export class Game extends Scene
 
         // Reset game state
         this.distance = 0;
+        this.score = 0;
         this.laserSpawnTimer = 0;
         this.lasers = [];
+        this.isPaused = false;
+
+        // Setup pause functionality
+        this.setupPauseControls();
 
         EventBus.emit('current-scene-ready', this);
     }
@@ -92,7 +111,16 @@ export class Game extends Scene
             color: '#ffffff'
         }).setDepth(1000);
 
-        this.helpText = this.add.text(960, 100, 'FIREWALL - Endless Runner\n\nSPACE/W/↑ - Jump\nSHIFT/S/↓ - Slide\n\nWatch for YELLOW warnings!\nJump over LOW lasers, Slide under HIGH lasers', {
+        // Score counter in top right
+        this.scoreText = this.add.text(this.scale.width - 16, 16, 'Score: 0', {
+            fontFamily: 'Arial',
+            fontSize: '32px',
+            color: '#00ff00',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(1, 0).setDepth(1000);
+
+        this.helpText = this.add.text(960, 100, 'FIREWALL - Endless Runner\n\nSPACE/W/↑ - Jump\n\nWatch for YELLOW warnings!\nJump over lasers!', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#ffffff',
@@ -107,12 +135,26 @@ export class Game extends Scene
 
     update(_time: number, delta: number): void
     {
+        // Don't update if paused
+        if (this.isPaused) {
+            return;
+        }
+
+        // Scroll the background continuously
+        if (this.background) {
+            this.background.tilePositionX += (this.scrollSpeed * delta) / 1000;
+        }
+
         // Update player
         this.player.update(delta);
 
         // Update distance traveled
         this.distance += (this.scrollSpeed * delta) / 1000;
         this.distanceText.setText(`Distance: ${Math.floor(this.distance)}m`);
+        
+        // Update score (based on distance)
+        this.score = Math.floor(this.distance);
+        this.scoreText.setText(`Score: ${this.score}`);
 
         // Update laser spawning
         this.updatelaserSpawning(delta);
@@ -139,17 +181,8 @@ export class Game extends Scene
     }
 
     private spawnLaser(): void {
-        // Randomly choose laser height
-        const rand = Math.random();
-        let height: LaserHeight;
-
-        if (rand < 0.4) {
-            height = 'ground'; // 40% - Jump over
-        } else if (rand < 0.7) {
-            height = 'high';   // 30% - Slide unokder
-        } else {
-            height = 'middle'; // 30% - Either jump or slide
-        }
+        // Only spawn ground lasers since sliding is removed
+        const height: LaserHeight = 'ground';
 
         const x = 2000; // Spawn off-screen to the right
 
@@ -217,6 +250,111 @@ export class Game extends Scene
         this.scene.get('LeetCodeChallenge').events.once('shutdown', () => {
             this.isDiamondPaused = false;
         });
+    }
+
+    private setupPauseControls(): void {
+        // ESC key to pause/unpause
+        this.input.keyboard?.on('keydown-ESC', () => {
+            if (this.isDiamondPaused) {
+                return; // Don't pause if diamond challenge is active
+            }
+            this.togglePause();
+        });
+    }
+
+    private togglePause(): void {
+        if (this.isPaused) {
+            this.resumeGame();
+        } else {
+            this.pauseGame();
+        }
+    }
+
+    private pauseGame(): void {
+        this.isPaused = true;
+        this.physics.pause();
+        
+        // Create pause overlay
+        const centerX = this.scale.width / 2;
+        const centerY = this.scale.height / 2;
+
+        this.pauseOverlay = this.add.container(centerX, centerY);
+        this.pauseOverlay.setDepth(10000);
+
+        // Semi-transparent backdrop
+        const backdrop = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.8);
+        backdrop.setOrigin(0.5);
+        this.pauseOverlay.add(backdrop);
+
+        // Pause panel
+        const panel = this.add.rectangle(0, 0, 400, 300, 0x000000);
+        panel.setStrokeStyle(3, 0x00ff00);
+        this.pauseOverlay.add(panel);
+
+        // Pause title
+        const title = this.add.text(0, -80, '> PAUSED', {
+            fontSize: '36px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#00ff00',
+            strokeThickness: 1
+        });
+        title.setOrigin(0.5);
+        this.pauseOverlay.add(title);
+
+        // Resume button
+        const resumeBtn = this.add.text(0, 20, '> RESUME (ESC)', {
+            fontSize: '20px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#00ff00',
+            strokeThickness: 0.5
+        });
+        resumeBtn.setOrigin(0.5);
+        resumeBtn.setInteractive({ useHandCursor: true });
+        resumeBtn.on('pointerdown', () => this.resumeGame());
+        resumeBtn.on('pointerover', () => {
+            resumeBtn.setStyle({ strokeThickness: 1 });
+        });
+        resumeBtn.on('pointerout', () => {
+            resumeBtn.setStyle({ strokeThickness: 0.5 });
+        });
+        this.pauseOverlay.add(resumeBtn);
+
+        // Quit button
+        const quitBtn = this.add.text(0, 70, '> QUIT TO MENU', {
+            fontSize: '18px',
+            color: '#ff0000',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#ff0000',
+            strokeThickness: 0.5
+        });
+        quitBtn.setOrigin(0.5);
+        quitBtn.setInteractive({ useHandCursor: true });
+        quitBtn.on('pointerdown', () => {
+            this.scene.start('MainMenu');
+        });
+        quitBtn.on('pointerover', () => {
+            quitBtn.setStyle({ strokeThickness: 1 });
+        });
+        quitBtn.on('pointerout', () => {
+            quitBtn.setStyle({ strokeThickness: 0.5 });
+        });
+        this.pauseOverlay.add(quitBtn);
+    }
+
+    private resumeGame(): void {
+        this.isPaused = false;
+        this.physics.resume();
+        
+        // Remove pause overlay
+        if (this.pauseOverlay) {
+            this.pauseOverlay.destroy();
+            this.pauseOverlay = null as any;
+        }
     }
 
     changeScene ()

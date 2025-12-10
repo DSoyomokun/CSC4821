@@ -35,132 +35,197 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private createBackdrop() {
+        // Full black backdrop
         const backdrop = this.add.rectangle(
             0, 0,
             this.scale.width,
             this.scale.height,
-            0x000000, 0.90
+            0x000000, 0.95
         );
         backdrop.setOrigin(0, 0);
         backdrop.setInteractive(); // Block input to game scene
+
+        // Add subtle matrix-style grid pattern
+        const graphics = this.add.graphics();
+        graphics.lineStyle(1, 0x00ff00, 0.1);
+        
+        const gridSize = 50;
+        for (let x = 0; x < this.scale.width; x += gridSize) {
+            graphics.moveTo(x, 0);
+            graphics.lineTo(x, this.scale.height);
+        }
+        for (let y = 0; y < this.scale.height; y += gridSize) {
+            graphics.moveTo(0, y);
+            graphics.lineTo(this.scale.width, y);
+        }
+        graphics.strokePath();
     }
 
     private createChallengeUI() {
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
 
-        // Main panel
-        const panelWidth = this.scale.width - 100;
-        const panelHeight = this.scale.height - 100;
+        // Main panel - pure black with green border
+        const panelWidth = this.scale.width - 80;
+        const panelHeight = this.scale.height - 80;
 
-        const panel = this.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x1e1e1e);
-        panel.setStrokeStyle(3, 0x4CAF50);
+        // Outer glow effect
+        const glow = this.add.rectangle(centerX, centerY, panelWidth + 4, panelHeight + 4, 0x00ff00, 0.2);
+        glow.setStrokeStyle(2, 0x00ff00, 0.5);
+
+        // Main panel - deep black
+        const panel = this.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x000000);
+        panel.setStrokeStyle(2, 0x00ff00);
+
+        // Add "FIREWALL" title at top
+        const titleText = this.add.text(centerX, centerY - panelHeight / 2 + 25, 'FIREWALL', {
+            fontSize: '32px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#00ff00',
+            strokeThickness: 1
+        });
+        titleText.setOrigin(0.5, 0.5);
+
+        // Add decorative lines
+        const lineGraphics = this.add.graphics();
+        lineGraphics.lineStyle(1, 0x00ff00, 0.5);
+        lineGraphics.moveTo(centerX - panelWidth / 2 + 20, centerY - panelHeight / 2 + 50);
+        lineGraphics.lineTo(centerX + panelWidth / 2 - 20, centerY - panelHeight / 2 + 50);
 
         // Split into two columns: left = problem description, right = code editor
         const leftX = centerX - panelWidth / 4;
         const rightX = centerX + panelWidth / 4;
-        const columnWidth = panelWidth / 2 - 40;
+        const columnWidth = panelWidth / 2 - 50;
+
+        // Divider line between columns
+        lineGraphics.lineStyle(1, 0x00ff00, 0.3);
+        lineGraphics.moveTo(centerX, centerY - panelHeight / 2 + 60);
+        lineGraphics.lineTo(centerX, centerY + panelHeight / 2 - 100);
 
         // === LEFT COLUMN: Problem Description ===
-        this.createProblemPanel(leftX, centerY, columnWidth, panelHeight - 40);
+        this.createProblemPanel(leftX, centerY + 20, columnWidth, panelHeight - 120);
 
         // === RIGHT COLUMN: Code Editor ===
-        this.createEditorPanel(rightX, centerY, columnWidth, panelHeight - 40);
+        this.createEditorPanel(rightX, centerY + 20, columnWidth, panelHeight - 120);
 
         // === CONTROL BUTTONS AT BOTTOM ===
-        this.createControlButtons(centerX, centerY + panelHeight / 2 - 50);
+        this.createControlButtons(centerX, centerY + panelHeight / 2 - 60);
     }
 
     private createProblemPanel(x: number, y: number, width: number, height: number) {
         const topY = y - height / 2 + 20;
 
-        // Title
+        // Panel background - very dark with subtle green border
+        const panelBg = this.add.rectangle(x, y, width, height, 0x0a0a0a);
+        panelBg.setStrokeStyle(1, 0x00ff00, 0.3);
+
+        // Title - bright green matrix style
         const title = this.add.text(x, topY,
-            `${this.problem.number}. ${this.problem.title}`, {
-            fontSize: '24px',
-            color: '#4CAF50',
+            `> ${this.problem.number}. ${this.problem.title}`, {
+            fontSize: '22px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
             fontStyle: 'bold',
-            wordWrap: { width: width - 20 }
+            wordWrap: { width: width - 30 }
         });
         title.setOrigin(0.5, 0);
 
-        // Difficulty and Topic badges
-        const badgeY = topY + title.height + 15;
+        // Difficulty and Topic badges - matrix style
+        const badgeY = topY + title.height + 20;
         const difficultyColor = this.getDifficultyColor(this.problem.difficulty);
-        const difficultyBadge = this.add.text(x - 60, badgeY,
-            `${this.problem.leetcodeDifficulty}`, {
-            fontSize: '14px',
+        const difficultyBadge = this.add.text(x - 70, badgeY,
+            `[${this.problem.leetcodeDifficulty}]`, {
+            fontSize: '12px',
             color: difficultyColor,
-            backgroundColor: '#2d2d30',
-            padding: { x: 8, y: 4 }
+            fontFamily: 'Courier New, monospace',
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 5 },
+            stroke: difficultyColor,
+            strokeThickness: 1
         });
         difficultyBadge.setOrigin(0.5, 0);
 
-        const topicBadge = this.add.text(x + 60, badgeY,
-            this.problem.topic, {
-            fontSize: '14px',
-            color: '#888',
-            backgroundColor: '#2d2d30',
-            padding: { x: 8, y: 4 }
+        const topicBadge = this.add.text(x + 70, badgeY,
+            `[${this.problem.topic}]`, {
+            fontSize: '12px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 5 },
+            stroke: '#00ff00',
+            strokeThickness: 1
         });
         topicBadge.setOrigin(0.5, 0);
 
-        // Description
+        // Description - green text on black
         let contentY = badgeY + 40;
         const description = this.add.text(x - width / 2 + 20, contentY,
-            this.problem.description, {
-            fontSize: '16px',
-            color: '#d4d4d4',
+            `> ${this.problem.description}`, {
+            fontSize: '15px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
             wordWrap: { width: width - 40 },
-            lineSpacing: 5
+            lineSpacing: 6
         });
         description.setOrigin(0, 0);
 
-        // Examples
-        contentY += description.height + 20;
+        // Examples - matrix terminal style
+        contentY += description.height + 25;
         const examplesTitle = this.add.text(x - width / 2 + 20, contentY,
-            'Examples:', {
-            fontSize: '18px',
-            color: '#4CAF50',
-            fontStyle: 'bold'
+            '> EXAMPLES:', {
+            fontSize: '16px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#00ff00',
+            strokeThickness: 0.5
         });
         examplesTitle.setOrigin(0, 0);
 
-        contentY += examplesTitle.height + 10;
+        contentY += examplesTitle.height + 15;
         this.problem.examples.forEach((example, index) => {
             const exampleText = this.add.text(x - width / 2 + 30, contentY,
-                `Example ${index + 1}:\n` +
-                `Input: ${example.input}\n` +
-                `Output: ${example.output}` +
-                (example.explanation ? `\nExplanation: ${example.explanation}` : ''), {
-                fontSize: '14px',
-                color: '#d4d4d4',
+                `> Example ${index + 1}:\n` +
+                `  Input: ${example.input}\n` +
+                `  Output: ${example.output}` +
+                (example.explanation ? `\n  Explanation: ${example.explanation}` : ''), {
+                fontSize: '13px',
+                color: '#00ff00',
                 fontFamily: 'Courier New, monospace',
-                backgroundColor: '#2d2d30',
-                padding: { x: 8, y: 8 },
-                wordWrap: { width: width - 60 }
+                backgroundColor: '#000000',
+                padding: { x: 10, y: 8 },
+                stroke: '#00ff00',
+                strokeThickness: 0.3,
+                wordWrap: { width: width - 70 }
             });
             exampleText.setOrigin(0, 0);
-            contentY += exampleText.height + 10;
+            contentY += exampleText.height + 12;
         });
 
-        // Constraints
+        // Constraints - terminal style
         contentY += 10;
         const constraintsTitle = this.add.text(x - width / 2 + 20, contentY,
-            'Constraints:', {
-            fontSize: '18px',
-            color: '#4CAF50',
-            fontStyle: 'bold'
+            '> CONSTRAINTS:', {
+            fontSize: '16px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#00ff00',
+            strokeThickness: 0.5
         });
         constraintsTitle.setOrigin(0, 0);
 
-        contentY += constraintsTitle.height + 10;
+        contentY += constraintsTitle.height + 15;
         const constraintsText = this.add.text(x - width / 2 + 30, contentY,
-            this.problem.constraints.map(c => `• ${c}`).join('\n'), {
-            fontSize: '13px',
-            color: '#888',
+            this.problem.constraints.map(c => `  > ${c}`).join('\n'), {
+            fontSize: '12px',
+            color: '#00ff00',
             fontFamily: 'Courier New, monospace',
-            wordWrap: { width: width - 60 }
+            wordWrap: { width: width - 60 },
+            stroke: '#00ff00',
+            strokeThickness: 0.2
         });
         constraintsText.setOrigin(0, 0);
     }
@@ -168,37 +233,87 @@ export class LeetCodeChallenge extends Scene {
     private createEditorPanel(x: number, y: number, width: number, height: number) {
         const topY = y - height / 2 + 20;
 
-        // Editor title
+        // Panel background - very dark with green border
+        const panelBg = this.add.rectangle(x, y, width, height, 0x0a0a0a);
+        panelBg.setStrokeStyle(1, 0x00ff00, 0.3);
+
+        // Editor title - matrix style
         const editorTitle = this.add.text(x, topY,
-            'Code Editor', {
+            '> CODE EDITOR', {
             fontSize: '18px',
-            color: '#4CAF50',
-            fontStyle: 'bold'
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#00ff00',
+            strokeThickness: 0.5
         });
         editorTitle.setOrigin(0.5, 0);
 
-        // Language selector buttons
-        const jsButton = this.add.text(x - width / 2 + 20, topY,
-            'JavaScript', {
+        // Language selector buttons - matrix terminal style
+        // Position buttons prominently above the editor, centered
+        const buttonY = topY + 35;
+        
+        // Language label
+        const langLabel = this.add.text(x, buttonY, 'Language:', {
             fontSize: '14px',
-            color: '#ffffff',
-            backgroundColor: '#FFC107',
-            padding: { x: 8, y: 4 }
+            color: '#00ff41',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold'
         });
-        jsButton.setOrigin(0, 0);
+        langLabel.setOrigin(0.5, 0);
+        langLabel.setDepth(10001);
+        
+        // JavaScript button - active by default
+        const jsButton = this.add.text(x - 70, buttonY + 25,
+            '[JavaScript] ✓', {
+            fontSize: '18px',
+            color: '#00ff41', // Bright neon green
+            fontFamily: 'Courier New, monospace',
+            backgroundColor: '#001a00', // Active state - darker green background
+            padding: { x: 15, y: 8 },
+            stroke: '#00ff41', // Bright neon green stroke
+            strokeThickness: 4 // Very thick stroke for visibility
+        });
+        jsButton.setOrigin(0.5, 0);
         jsButton.setInteractive({ useHandCursor: true });
+        jsButton.setDepth(10001); // Very high depth to ensure visibility
         jsButton.on('pointerdown', () => this.switchLanguage('javascript'));
-
-        const pythonButton = this.add.text(x - width / 2 + 110, topY,
-            'Python', {
-            fontSize: '14px',
-            color: '#cccccc',
-            backgroundColor: '#2d2d30',
-            padding: { x: 8, y: 4 }
+        jsButton.on('pointerover', () => {
+            jsButton.setStyle({ backgroundColor: '#003300', strokeThickness: 5 });
         });
-        pythonButton.setOrigin(0, 0);
+        jsButton.on('pointerout', () => {
+            if (this.currentLanguage === 'javascript') {
+                jsButton.setStyle({ backgroundColor: '#001a00', strokeThickness: 4 }); // Keep active state
+            } else {
+                jsButton.setStyle({ backgroundColor: '#000000', strokeThickness: 3 });
+            }
+        });
+
+        // Python button - inactive by default
+        const pythonButton = this.add.text(x + 70, buttonY + 25,
+            '[Python]', {
+            fontSize: '18px',
+            color: '#00ff41', // Bright neon green
+            fontFamily: 'Courier New, monospace',
+            backgroundColor: '#000000', // Inactive state
+            padding: { x: 15, y: 8 },
+            stroke: '#00ff41', // Bright neon green stroke
+            strokeThickness: 4 // Very thick stroke for visibility
+        });
+        pythonButton.setOrigin(0.5, 0);
         pythonButton.setInteractive({ useHandCursor: true });
+        pythonButton.setDepth(10001); // Very high depth to ensure visibility
         pythonButton.on('pointerdown', () => this.switchLanguage('python'));
+        pythonButton.on('pointerover', () => {
+            pythonButton.setStyle({ backgroundColor: '#003300', strokeThickness: 5 });
+        });
+        pythonButton.on('pointerout', () => {
+            if (this.currentLanguage === 'python') {
+                pythonButton.setStyle({ backgroundColor: '#001a00', strokeThickness: 4 }); // Keep active state
+            } else {
+                pythonButton.setStyle({ backgroundColor: '#000000', strokeThickness: 3 });
+            }
+        });
 
         // Store reference to language badge for updates
         this.languageBadge = jsButton;
@@ -215,14 +330,16 @@ export class LeetCodeChallenge extends Scene {
         this.codeByLanguage.set('javascript', this.problem.starterCode || this.getDefaultStarterCode('javascript'));
         this.codeByLanguage.set('python', this.problem.starterCodePython || this.getDefaultStarterCode('python'));
 
-        // Create DOM element for Monaco editor
+        // Create DOM element for Monaco editor - matrix style
         this.editorContainer = document.createElement('div');
         this.editorContainer.id = 'monaco-editor-container';
         this.editorContainer.style.position = 'absolute';
-        this.editorContainer.style.border = '2px solid #3e3e42';
-        this.editorContainer.style.zIndex = '100';
+        this.editorContainer.style.border = '2px solid #00ff00';
+        this.editorContainer.style.backgroundColor = '#000000';
+        this.editorContainer.style.zIndex = '10'; // Lower z-index so it doesn't block Phaser buttons
         this.editorContainer.style.display = 'block';
-        this.editorContainer.style.pointerEvents = 'none'; // Let clicks pass through to canvas
+        this.editorContainer.style.pointerEvents = 'none'; // Let clicks pass through to canvas by default
+        this.editorContainer.style.overflow = 'hidden'; // Prevent overflow from covering buttons
 
         document.body.appendChild(this.editorContainer);
 
@@ -232,9 +349,32 @@ export class LeetCodeChallenge extends Scene {
             'javascript'
         );
 
+        // Create custom matrix theme
+        monaco.editor.defineTheme('firewall-matrix', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: '', foreground: '00ff00', background: '000000' },
+                { token: 'comment', foreground: '00ff00', fontStyle: 'italic' },
+                { token: 'keyword', foreground: '00ff00', fontStyle: 'bold' },
+                { token: 'string', foreground: '00ff00' },
+                { token: 'number', foreground: '00ff00' }
+            ],
+            colors: {
+                'editor.background': '#000000',
+                'editor.foreground': '#00ff00',
+                'editor.lineHighlightBackground': '#001a00',
+                'editor.selectionBackground': '#003300',
+                'editorCursor.foreground': '#00ff00',
+                'editorWhitespace.foreground': '#003300',
+                'editorIndentGuide.activeBackground': '#00ff00',
+                'editorIndentGuide.background': '#003300'
+            }
+        });
+
         this.editor = monaco.editor.create(this.editorContainer, {
             model: model,
-            theme: 'vs-dark',
+            theme: 'firewall-matrix',
             automaticLayout: true,
             minimap: { enabled: false },
             fontSize: 14,
@@ -242,14 +382,20 @@ export class LeetCodeChallenge extends Scene {
             scrollBeyondLastLine: false,
             wordWrap: 'on',
             tabSize: 2,
-            renderWhitespace: 'selection'
+            renderWhitespace: 'selection',
+            fontFamily: 'Courier New, monospace'
         });
 
         // Enable pointer events on the Monaco editor itself so it's interactive
         const monacoDOM = this.editorContainer.querySelector('.monaco-editor');
         if (monacoDOM) {
             (monacoDOM as HTMLElement).style.pointerEvents = 'auto';
+            // Ensure Monaco editor doesn't overflow and cover buttons
+            (monacoDOM as HTMLElement).style.overflow = 'hidden';
         }
+        
+        // Also ensure the editor container itself doesn't cover buttons by limiting its height
+        // This will be handled in updateMonacoPosition
 
         // Disable validation to prevent worker issues
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
@@ -270,6 +416,17 @@ export class LeetCodeChallenge extends Scene {
         this.editorContainer.addEventListener('keyup', (e) => {
             e.stopPropagation();
         });
+        
+        // Prevent Monaco editor from blocking clicks outside its bounds
+        // Add a click handler to the document that checks if click is on a button
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            // If click is on Monaco editor or its children, don't interfere
+            if (this.editorContainer && this.editorContainer.contains(target)) {
+                return;
+            }
+            // Otherwise, let Phaser handle it (buttons are Phaser objects)
+        }, true);
 
         // Position the editor correctly initially
         this.updateMonacoPosition();
@@ -316,6 +473,13 @@ export class LeetCodeChallenge extends Scene {
         this.editorContainer.style.top = `${screenTop}px`;
         this.editorContainer.style.width = `${screenWidth}px`;
         this.editorContainer.style.height = `${screenHeight}px`;
+        
+        // Ensure editor container doesn't extend beyond its bounds and block buttons
+        this.editorContainer.style.overflow = 'hidden';
+        this.editorContainer.style.maxHeight = `${screenHeight}px`;
+        
+        // Re-apply pointer events: container is 'none', but Monaco editor inside is 'auto'
+        this.editorContainer.style.pointerEvents = 'none';
 
         console.log('Monaco editor bounds:', {
             left: screenLeft,
@@ -362,30 +526,42 @@ export class LeetCodeChallenge extends Scene {
         const pythonButton = (jsButton as any).pythonButton;
 
         if (language === 'javascript') {
+            jsButton.setText('[JavaScript] ✓');
             jsButton.setStyle({
-                fontSize: '14px',
-                color: '#ffffff',
-                backgroundColor: '#FFC107',
-                padding: { x: 8, y: 4 }
+                fontSize: '16px',
+                color: '#00ff41', // Bright neon green
+                backgroundColor: '#001a00',
+                padding: { x: 12, y: 6 },
+                stroke: '#00ff41',
+                strokeThickness: 3
             });
+            pythonButton.setText('[Python]');
             pythonButton.setStyle({
-                fontSize: '14px',
-                color: '#cccccc',
-                backgroundColor: '#2d2d30',
-                padding: { x: 8, y: 4 }
+                fontSize: '16px',
+                color: '#00ff41', // Bright neon green
+                backgroundColor: '#000000',
+                padding: { x: 12, y: 6 },
+                stroke: '#00ff41',
+                strokeThickness: 3
             });
         } else {
+            jsButton.setText('[JavaScript]');
             jsButton.setStyle({
-                fontSize: '14px',
-                color: '#cccccc',
-                backgroundColor: '#2d2d30',
-                padding: { x: 8, y: 4 }
+                fontSize: '16px',
+                color: '#00ff41', // Bright neon green
+                backgroundColor: '#000000',
+                padding: { x: 12, y: 6 },
+                stroke: '#00ff41',
+                strokeThickness: 3
             });
+            pythonButton.setText('[Python] ✓');
             pythonButton.setStyle({
-                fontSize: '14px',
-                color: '#ffffff',
-                backgroundColor: '#3776AB', // Python blue
-                padding: { x: 8, y: 4 }
+                fontSize: '16px',
+                color: '#00ff41', // Bright neon green
+                backgroundColor: '#001a00',
+                padding: { x: 12, y: 6 },
+                stroke: '#00ff41',
+                strokeThickness: 3
             });
         }
 
@@ -393,17 +569,17 @@ export class LeetCodeChallenge extends Scene {
     }
 
     private createControlButtons(x: number, y: number) {
-        // Run Tests button
-        this.createButton(x - 300, y, 'Run Tests', 0x2196F3, () => this.runTests());
+        // Run Tests button - cyan/green matrix style
+        this.createButton(x - 300, y, '> RUN TESTS', 0x00ff00, () => this.runTests());
 
-        // Submit button
-        this.createButton(x - 100, y, 'Submit', 0x4CAF50, () => this.submitSolution());
+        // Submit button - bright green matrix style
+        this.createButton(x - 100, y, '> SUBMIT', 0x00ff00, () => this.submitSolution());
 
-        // Skip button
-        this.createButton(x + 100, y, 'Skip', 0xf44336, () => this.skipProblem());
+        // Skip button - red warning style
+        this.createButton(x + 100, y, '> SKIP', 0xff0000, () => this.skipProblem());
 
-        // Close button
-        this.createButton(x + 300, y, 'Close (ESC)', 0x666666, () => this.closeChallenge());
+        // Close button - gray terminal style
+        this.createButton(x + 300, y, '> CLOSE (ESC)', 0x00ff00, () => this.closeChallenge());
 
         // Setup keyboard shortcuts
         this.input.keyboard?.on('keydown-ESC', () => {
@@ -413,28 +589,47 @@ export class LeetCodeChallenge extends Scene {
 
     private createButton(x: number, y: number, text: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
         const button = this.add.container(x, y);
+        button.setDepth(10001); // Ensure buttons are above everything, including Monaco editor
 
-        const bg = this.add.rectangle(0, 0, 150, 45, color);
+        // Button background - black with colored border
+        const bg = this.add.rectangle(0, 0, 160, 50, 0x000000);
+        bg.setStrokeStyle(2, color);
         bg.setInteractive({ useHandCursor: true });
+        bg.setDepth(10001);
         button.add(bg);
 
+        // Button label - matrix terminal style
         const label = this.add.text(0, 0, text, {
-            fontSize: '14px',
-            color: '#ffffff',
-            fontStyle: 'bold'
+            fontSize: '13px',
+            color: `#${color.toString(16).padStart(6, '0')}`,
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: `#${color.toString(16).padStart(6, '0')}`,
+            strokeThickness: 0.5
         });
         label.setOrigin(0.5);
         button.add(label);
 
-        // Click handler
-        bg.on('pointerdown', onClick);
+        // Click handler - prevent default browser behavior
+        bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            // Prevent default browser actions (like print screen)
+            if (pointer.event) {
+                pointer.event.preventDefault();
+                pointer.event.stopPropagation();
+            }
+            onClick();
+        });
 
-        // Hover effect
+        // Hover effect - brighter glow
         bg.on('pointerover', () => {
-            bg.setFillStyle(color + 0x333333);
+            bg.setFillStyle(0x001a00);
+            bg.setStrokeStyle(3, color);
+            label.setStyle({ strokeThickness: 1 });
         });
         bg.on('pointerout', () => {
-            bg.setFillStyle(color);
+            bg.setFillStyle(0x000000);
+            bg.setStrokeStyle(2, color);
+            label.setStyle({ strokeThickness: 0.5 });
         });
 
         return button;
@@ -570,24 +765,32 @@ export class LeetCodeChallenge extends Scene {
         const successOverlay = this.add.container(centerX, centerY);
         successOverlay.setDepth(10000);
 
-        const bg = this.add.rectangle(0, 0, 500, 250, 0x4CAF50);
-        bg.setAlpha(0.95);
+        // Matrix-style success overlay
+        const bg = this.add.rectangle(0, 0, 550, 280, 0x000000);
+        bg.setStrokeStyle(3, 0x00ff00);
+        bg.setAlpha(0.98);
         successOverlay.add(bg);
 
-        const text = this.add.text(0, -50, '✓ Solution Accepted!', {
-            fontSize: '36px',
-            color: '#ffffff',
-            fontStyle: 'bold'
+        const text = this.add.text(0, -60, '> SOLUTION ACCEPTED', {
+            fontSize: '32px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#00ff00',
+            strokeThickness: 1
         });
         text.setOrigin(0.5);
         successOverlay.add(text);
 
         const stats = this.add.text(0, 20,
-            `Problem ${this.problem.number}/75 Complete\n` +
-            `Earned ${this.problem.reward} points`, {
-            fontSize: '20px',
-            color: '#ffffff',
-            align: 'center'
+            `> Problem ${this.problem.number}/75 Complete\n` +
+            `> Earned ${this.problem.reward} points`, {
+            fontSize: '18px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            align: 'center',
+            stroke: '#00ff00',
+            strokeThickness: 0.5
         });
         stats.setOrigin(0.5);
         successOverlay.add(stats);
@@ -623,10 +826,26 @@ export class LeetCodeChallenge extends Scene {
                 // Using Brython or Pyodide would be ideal, but for now we'll convert simple Python to JS
                 return this.transpilePythonToJS(code);
             } else {
-                // JavaScript evaluation
-                const evalCode = `${code}\nreturn ${this.problem.functionName};`;
-                const fn = new Function(evalCode);
-                return fn();
+                // JavaScript evaluation - handle different function declaration formats
+                const functionName = this.problem.functionName;
+                
+                // Wrap code in an IIFE to create isolated scope and return the function
+                const evalCode = `
+                    (function() {
+                        ${code}
+                        // Return the function (works for var, let, const, and function declarations)
+                        return ${functionName};
+                    })();
+                `;
+                
+                const fn = new Function('return ' + evalCode);
+                const result = fn();
+                
+                if (typeof result !== 'function') {
+                    throw new Error(`Expected ${functionName} to be a function, but got ${typeof result}`);
+                }
+                
+                return result;
             }
         } catch (error) {
             throw new Error(`Compilation error: ${error instanceof Error ? error.message : String(error)}`);
@@ -715,29 +934,37 @@ export class LeetCodeChallenge extends Scene {
         const totalCount = results.length;
         const allPassed = passedCount === totalCount;
 
-        // Background
-        const bgColor = allPassed ? 0x4CAF50 : 0xf44336;
-        const bg = this.add.rectangle(0, 0, 600, 400, bgColor);
-        bg.setAlpha(0.95);
+        // Background - matrix style
+        const bgColor = 0x000000;
+        const borderColor = allPassed ? 0x00ff00 : 0xff0000;
+        const bg = this.add.rectangle(0, 0, 650, 450, bgColor);
+        bg.setStrokeStyle(3, borderColor);
+        bg.setAlpha(0.98);
         resultsOverlay.add(bg);
 
-        // Title
-        const title = this.add.text(0, -160,
+        // Title - matrix terminal style
+        const title = this.add.text(0, -180,
             isSubmission
-                ? (allPassed ? '✓ All Tests Passed!' : '✗ Some Tests Failed')
-                : 'Test Results', {
-            fontSize: '28px',
-            color: '#ffffff',
-            fontStyle: 'bold'
+                ? (allPassed ? '> ALL TESTS PASSED' : '> SOME TESTS FAILED')
+                : '> TEST RESULTS', {
+            fontSize: '26px',
+            color: `#${borderColor.toString(16).padStart(6, '0')}`,
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: `#${borderColor.toString(16).padStart(6, '0')}`,
+            strokeThickness: 1
         });
         title.setOrigin(0.5);
         resultsOverlay.add(title);
 
-        // Stats
-        const stats = this.add.text(0, -120,
-            `${passedCount}/${totalCount} tests passed`, {
-            fontSize: '18px',
-            color: '#ffffff'
+        // Stats - matrix style
+        const stats = this.add.text(0, -140,
+            `> ${passedCount}/${totalCount} tests passed`, {
+            fontSize: '16px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            stroke: '#00ff00',
+            strokeThickness: 0.5
         });
         stats.setOrigin(0.5);
         resultsOverlay.add(stats);
@@ -748,30 +975,35 @@ export class LeetCodeChallenge extends Scene {
 
         for (let i = 0; i < maxDisplay; i++) {
             const result = results[i];
-            const status = result.passed ? '✓' : '✗';
+            const status = result.passed ? '[PASS]' : '[FAIL]';
+            const statusColor = result.passed ? '#00ff00' : '#ff0000';
 
-            const testText = this.add.text(-250, yOffset,
-                `${status} Test ${i + 1}: ${JSON.stringify(result.input)}`, {
-                fontSize: '14px',
-                color: '#ffffff',
-                fontFamily: 'Courier New, monospace'
+            const testText = this.add.text(-280, yOffset,
+                `> ${status} Test ${i + 1}: ${JSON.stringify(result.input)}`, {
+                fontSize: '13px',
+                color: statusColor,
+                fontFamily: 'Courier New, monospace',
+                stroke: statusColor,
+                strokeThickness: 0.3
             });
             testText.setOrigin(0, 0.5);
             resultsOverlay.add(testText);
 
             if (!result.passed) {
-                const errorText = this.add.text(-250, yOffset + 20,
+                const errorText = this.add.text(-280, yOffset + 20,
                     result.error
-                        ? `Error: ${result.error}`
-                        : `Expected: ${JSON.stringify(result.expected)}, Got: ${JSON.stringify(result.actual)}`, {
-                    fontSize: '12px',
-                    color: '#ffcccc',
+                        ? `  > Error: ${result.error}`
+                        : `  > Expected: ${JSON.stringify(result.expected)}\n  > Got: ${JSON.stringify(result.actual)}`, {
+                    fontSize: '11px',
+                    color: '#ff0000',
                     fontFamily: 'Courier New, monospace',
-                    wordWrap: { width: 500 }
+                    wordWrap: { width: 550 },
+                    stroke: '#ff0000',
+                    strokeThickness: 0.2
                 });
                 errorText.setOrigin(0, 0);
                 resultsOverlay.add(errorText);
-                yOffset += 25;
+                yOffset += 30;
             }
 
             yOffset += 30;
@@ -779,23 +1011,41 @@ export class LeetCodeChallenge extends Scene {
 
         if (results.length > maxDisplay) {
             const moreText = this.add.text(0, yOffset,
-                `... and ${results.length - maxDisplay} more tests`, {
-                fontSize: '14px',
-                color: '#cccccc'
+                `> ... and ${results.length - maxDisplay} more tests`, {
+                fontSize: '13px',
+                color: '#00ff00',
+                fontFamily: 'Courier New, monospace',
+                stroke: '#00ff00',
+                strokeThickness: 0.3
             });
             moreText.setOrigin(0.5);
             resultsOverlay.add(moreText);
         }
 
-        // Close button
-        const closeBtn = this.add.text(0, 160, 'Close', {
-            fontSize: '18px',
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 20, y: 10 }
+        // Close button - matrix style
+        const closeBtnBg = this.add.rectangle(0, 180, 120, 40, 0x000000);
+        closeBtnBg.setStrokeStyle(2, 0x00ff00);
+        closeBtnBg.setInteractive({ useHandCursor: true });
+        resultsOverlay.add(closeBtnBg);
+
+        const closeBtn = this.add.text(0, 180, '> CLOSE', {
+            fontSize: '14px',
+            color: '#00ff00',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#00ff00',
+            strokeThickness: 0.5
         });
         closeBtn.setOrigin(0.5);
         closeBtn.setInteractive({ useHandCursor: true });
+        
+        closeBtnBg.on('pointerdown', () => {
+            resultsOverlay.destroy();
+            // Show Monaco editor again
+            if (this.editorContainer) {
+                this.editorContainer.style.display = 'block';
+            }
+        });
         closeBtn.on('pointerdown', () => {
             resultsOverlay.destroy();
             // Show Monaco editor again
@@ -803,6 +1053,16 @@ export class LeetCodeChallenge extends Scene {
                 this.editorContainer.style.display = 'block';
             }
         });
+        
+        closeBtnBg.on('pointerover', () => {
+            closeBtnBg.setFillStyle(0x001a00);
+            closeBtnBg.setStrokeStyle(3, 0x00ff00);
+        });
+        closeBtnBg.on('pointerout', () => {
+            closeBtnBg.setFillStyle(0x000000);
+            closeBtnBg.setStrokeStyle(2, 0x00ff00);
+        });
+        
         resultsOverlay.add(closeBtn);
 
         // Animation
@@ -828,43 +1088,72 @@ export class LeetCodeChallenge extends Scene {
         const errorOverlay = this.add.container(centerX, centerY);
         errorOverlay.setDepth(10000);
 
-        const bg = this.add.rectangle(0, 0, 500, 200, 0xf44336);
-        bg.setAlpha(0.95);
+        // Matrix-style error overlay
+        const bg = this.add.rectangle(0, 0, 550, 250, 0x000000);
+        bg.setStrokeStyle(3, 0xff0000);
+        bg.setAlpha(0.98);
         errorOverlay.add(bg);
 
-        const title = this.add.text(0, -50, '✗ Compilation Error', {
-            fontSize: '24px',
-            color: '#ffffff',
-            fontStyle: 'bold'
+        const title = this.add.text(0, -60, '> COMPILATION ERROR', {
+            fontSize: '22px',
+            color: '#ff0000',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#ff0000',
+            strokeThickness: 1
         });
         title.setOrigin(0.5);
         errorOverlay.add(title);
 
-        const errorText = this.add.text(0, 0, message, {
-            fontSize: '14px',
-            color: '#ffffff',
+        const errorText = this.add.text(0, 10, `> ${message}`, {
+            fontSize: '13px',
+            color: '#ff0000',
             fontFamily: 'Courier New, monospace',
-            wordWrap: { width: 450 },
-            align: 'center'
+            wordWrap: { width: 500 },
+            align: 'center',
+            stroke: '#ff0000',
+            strokeThickness: 0.3
         });
         errorText.setOrigin(0.5);
         errorOverlay.add(errorText);
 
-        const closeBtn = this.add.text(0, 70, 'Close', {
-            fontSize: '16px',
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 20, y: 8 }
+        // Close button - matrix style
+        const closeBtnBg = this.add.rectangle(0, 90, 120, 40, 0x000000);
+        closeBtnBg.setStrokeStyle(2, 0xff0000);
+        closeBtnBg.setInteractive({ useHandCursor: true });
+        errorOverlay.add(closeBtnBg);
+
+        const closeBtn = this.add.text(0, 90, '> CLOSE', {
+            fontSize: '14px',
+            color: '#ff0000',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold',
+            stroke: '#ff0000',
+            strokeThickness: 0.5
         });
         closeBtn.setOrigin(0.5);
         closeBtn.setInteractive({ useHandCursor: true });
-        closeBtn.on('pointerdown', () => {
+        
+        const closeHandler = () => {
             errorOverlay.destroy();
             // Show Monaco editor again
             if (this.editorContainer) {
                 this.editorContainer.style.display = 'block';
             }
+        };
+        
+        closeBtnBg.on('pointerdown', closeHandler);
+        closeBtn.on('pointerdown', closeHandler);
+        
+        closeBtnBg.on('pointerover', () => {
+            closeBtnBg.setFillStyle(0x1a0000);
+            closeBtnBg.setStrokeStyle(3, 0xff0000);
         });
+        closeBtnBg.on('pointerout', () => {
+            closeBtnBg.setFillStyle(0x000000);
+            closeBtnBg.setStrokeStyle(2, 0xff0000);
+        });
+        
         errorOverlay.add(closeBtn);
 
         // Animation
