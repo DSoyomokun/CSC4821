@@ -29,6 +29,14 @@ export class Preloader extends Scene
 
     preload ()
     {
+        // Set base URL - works for root domain (Netlify/Vercel) and subpaths (GitHub Pages)
+        const pathParts = window.location.pathname.split('/').filter(p => p);
+        const baseURL = pathParts.length > 0 && pathParts[0] === 'CSC4821' 
+            ? '/CSC4821/' 
+            : '/';
+        
+        this.load.setBaseURL(baseURL);
+        
         //  Load the assets for the game - Replace with your own assets
         this.load.setPath('assets');
 

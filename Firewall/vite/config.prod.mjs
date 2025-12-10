@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import monacoEditorPlugin from 'vite-plugin-monaco-editor';
 
 const phasermsg = () => {
     return {
@@ -18,12 +19,19 @@ const phasermsg = () => {
 }
 
 export default defineConfig({
-    base: '/CSC4821/',
+    base: '/', // Use root for Netlify/Vercel, or '/CSC4821/' for GitHub Pages
     plugins: [
         react(),
+        monacoEditorPlugin.default({
+            languageWorkers: ['editorWorkerService'],
+            customWorkers: []
+        }),
         phasermsg()
     ],
     logLevel: 'warning',
+    optimizeDeps: {
+        include: ['monaco-editor']
+    },
     build: {
         sourcemap: false,
         rollupOptions: {
