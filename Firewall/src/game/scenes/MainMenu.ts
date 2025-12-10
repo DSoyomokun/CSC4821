@@ -22,11 +22,27 @@ export class MainMenu extends Scene
         // Create tiling background that scrolls continuously - fill entire screen
         this.background = this.add.tileSprite(width / 2, height / 2, width, height, 'background');
 
-        this.logo = this.add.image(width / 2, height / 2 - 100, 'logo').setDepth(100);
+        // Hide the Phaser logo or replace with FIREWALL title
+        // this.logo = this.add.image(width / 2, height / 2 - 100, 'logo').setDepth(100);
 
-        this.title = this.add.text(width / 2, height / 2 + 100, 'Main Menu', {
-            fontFamily: 'Arial Black', fontSize: 64, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
+        // FIREWALL title - matrix style
+        this.title = this.add.text(width / 2, height / 2 - 50, 'FIREWALL', {
+            fontFamily: 'Courier New, monospace', 
+            fontSize: 96, 
+            color: '#00ff00',
+            stroke: '#00ff00', 
+            strokeThickness: 2,
+            fontStyle: 'bold',
+            align: 'center'
+        }).setOrigin(0.5).setDepth(100);
+        
+        // Subtitle
+        const subtitle = this.add.text(width / 2, height / 2 + 50, 'Main Menu', {
+            fontFamily: 'Courier New, monospace', 
+            fontSize: 32, 
+            color: '#00ff00',
+            stroke: '#000000', 
+            strokeThickness: 2,
             align: 'center'
         }).setOrigin(0.5).setDepth(100);
 

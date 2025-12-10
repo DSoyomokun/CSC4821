@@ -19,8 +19,8 @@ export class Laser {
     // Laser states
     private isActive: boolean = false;
     private hasZapped: boolean = false;
-    private warningDuration: number = 1500; // 1.5 seconds warning
-    private zapDuration: number = 800; // Laser stays active for 800ms then disappears
+    private warningDuration: number = 1000; // 1 second warning
+    private zapDuration: number = 1000; // Laser stays active for 1 second then disappears
     private warningTimer: number = 0;
     private zapTimer: number = 0;
 
@@ -37,8 +37,8 @@ export class Laser {
 
         switch (height) {
             case 'ground':
-                // Ground laser - horizontal beam at ground level, must JUMP over
-                this.y = groundY - 40; // Just above ground
+                // Laser at diamond position (same Y as diamonds spawn), moved up 20 pixels
+                this.y = groundY - 35; // 20 pixels higher than diamonds (was groundY - 15)
                 break;
             case 'middle':
                 // Middle laser - horizontal beam at mid-height
@@ -70,9 +70,15 @@ export class Laser {
             const body = this.sprite.body as Phaser.Physics.Arcade.Body;
             body.setAllowGravity(false);
             body.setImmovable(true);
+            // Set collision box size to match laser visual (wide horizontal beam)
             body.setSize(laserWidth * 2, laserHeight);
+            // Collision box is centered on sprite (origin is center by default)
+            // No offset needed - collision box matches visual laser beam
             body.enable = false; // Disable collision during warning
             body.debugShowBody = false; // Don't show debug outline
+            // Refresh the body to ensure changes take effect
+            body.updateFromGameObject();
+            console.log(`Laser collision box: size=${laserWidth * 2}x${laserHeight}, enabled=${body.enable}, position=(${this.x}, ${this.y})`);
         }
 
         console.log(`Created ${height} laser at x=${this.x}, y=${this.y}`);
@@ -86,8 +92,23 @@ export class Laser {
 
         // Update all visual positions
         this.sprite.x = this.x;
+        this.sprite.y = this.y; // Keep Y position synced
+        
+        // Update physics body position - critical for collision detection
+        if (this.sprite.body) {
+            const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+            // Update body position from sprite
+            body.updateFromGameObject();
+            // Ensure body is enabled when laser is active
+            if (this.isActive && !this.hasZapped) {
+                body.enable = true;
+            }
+        }
+        
         this.warningSprite.x = this.x;
+        this.warningSprite.y = this.y;
         this.laserSprite.x = this.x;
+        this.laserSprite.y = this.y;
 
         // Handle warning phase
         if (!this.isActive && !this.hasZapped) {
@@ -137,9 +158,18 @@ export class Laser {
         this.laserSprite.fillStyle(0xff0000, 0.8); // Red, semi-transparent
         this.laserSprite.fillRect(-laserWidth, -laserHeight/2, laserWidth * 2, laserHeight);
 
-        // Enable collision
+        // Enable collision and ensure collision box is properly configured
         if (this.sprite.body) {
-            (this.sprite.body as Phaser.Physics.Arcade.Body).enable = true;
+            const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+            // Ensure collision box is properly sized
+            body.setSize(laserWidth * 2, laserHeight);
+            // Enable collision detection
+            body.enable = true;
+            // Don't show debug outline
+            body.debugShowBody = false;
+            // Refresh the body to ensure changes take effect
+            body.updateFromGameObject();
+            console.log(`Laser activated at x=${this.x}, y=${this.y}, collision enabled, size=${laserWidth * 2}x${laserHeight}, body.enable=${body.enable}`);
         }
 
         console.log(`Laser activated at x=${this.x}`);

@@ -42,6 +42,13 @@ export class Preloader extends Scene
             frameHeight: 448
         });
 
+        // Load player slide sprite sheet (29 frames, 8 rows x 4 columns)
+        // Note: Update frameWidth and frameHeight based on actual sprite sheet dimensions
+        this.load.spritesheet('player-slide', 'spriteslide.png', {
+            frameWidth: 768,  // Update with actual frame width if different
+            frameHeight: 448  // Update with actual frame height if different
+        });
+
         //  Load game data
         this.load.setPath('data');
         this.load.json('spawn_patterns', 'spawn_patterns.json');
@@ -66,6 +73,18 @@ export class Preloader extends Scene
             }),
             frameRate: 24,  // Adjust for animation speed
             repeat: -1      // Loop forever
+        });
+
+        // Create player slide animation (29 frames: 0-28)
+        // Note: repeat: 0 means play once (no loop)
+        this.anims.create({
+            key: 'player-slide',
+            frames: this.anims.generateFrameNumbers('player-slide', {
+                start: 0,
+                end: 28  // 29 frames total (0-28)
+            }),
+            frameRate: 24,  // Adjust for animation speed (same as run animation)
+            repeat: 0       // Play once, don't loop (animationcomplete event will handle transition)
         });
 
         //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.

@@ -3,6 +3,8 @@ import { Scene } from 'phaser';
 import { RunnerPlayer } from '../objects/RunnerPlayer';
 import { Laser, LaserHeight } from '../objects/Laser';
 import { DiamondSpawner } from '../objects/DiamondSpawner';
+import { SoftPlatformSpawner } from '../objects/SoftPlatformSpawner';
+import { SoftPlatform } from '../objects/SoftPlatform';
 
 export class Game extends Scene
 {
@@ -12,6 +14,7 @@ export class Game extends Scene
     ground!: Phaser.GameObjects.Rectangle;
     lasers: Laser[] = [];
     diamondSpawner!: DiamondSpawner;
+    platformSpawner!: SoftPlatformSpawner;
 
     // Game state
     private scrollSpeed: number = 600; // pixels per second
@@ -20,19 +23,26 @@ export class Game extends Scene
 
     // Laser spawning
     private laserSpawnTimer: number = 0;
-    private laserSpawnInterval: number = 120000; // milliseconds
+    private laserSpawnInterval: number = 1000; // Check every 1.5 seconds for random spawn
+    private readonly LASER_SPAWN_CHANCE = 0.3; // 60% chance to spawn a laser each interval
 
     // UI
     private distanceText!: Phaser.GameObjects.Text;
     private helpText!: Phaser.GameObjects.Text;
     private scoreText!: Phaser.GameObjects.Text;
     private score: number = 0;
+    private lastDistanceScore: number = 0; // Track last distance-based score to prevent overwriting deductions
 
     // Collision
     private collisionGroup!: Phaser.Physics.Arcade.Group;
-    private laserCollider!: Phaser.Physics.Arcade.Collider;
-    private diamondCollider!: Phaser.Physics.Arcade.Collider;
     private isDiamondPaused: boolean = false;
+    private laserHitCooldowns: Map<Phaser.Physics.Arcade.Sprite, number> = new Map(); // Track hit cooldowns per laser
+    private readonly LASER_HIT_COOLDOWN = 200; // Cooldown in milliseconds between hits from same laser
+    
+    // Screen flash effect
+    private flashOverlay!: Phaser.GameObjects.Rectangle;
+    private flashTimer: number = 0;
+    private readonly FLASH_DURATION = 200; // Flash duration in milliseconds
     
     // Pause state
     private isPaused: boolean = false;
@@ -71,31 +81,63 @@ export class Game extends Scene
         // Create diamond spawner
         this.diamondSpawner = new DiamondSpawner(this, this.GROUND_Y, this.scrollSpeed);
 
+        // Create platform spawner
+        this.platformSpawner = new SoftPlatformSpawner(this, this.GROUND_Y, this.scrollSpeed);
+
         // Setup collisions ONCE (not every frame!)
-        this.laserCollider = this.physics.add.overlap(
+        this.physics.add.overlap(
             this.player.getSprite(),
             this.collisionGroup,
-            this.handleLaserCollision,
-            undefined,
+            this.handleLaserCollision.bind(this),
+            (_playerSprite: any, _laserSprite: any) => {
+                // Process callback: only allow collision if laser is active and player is NOT sliding
+                const laser = this.lasers.find(l => l.sprite === _laserSprite);
+                if (!laser) return false;
+                // Only collide if laser is active (not warning) and player is not sliding
+                return laser.getIsActive() && !this.player.isSlidingState();
+            },
             this
         );
 
-        this.diamondCollider = this.physics.add.overlap(
+        this.physics.add.overlap(
             this.player.getSprite(),
             this.diamondSpawner.diamondsGroup,
             this.handleDiamondCollision,
-            undefined,
+            (_playerSprite: any, _diamondSprite: any) => {
+                // Process callback: skip collision if player is sliding
+                return !this.player.isSlidingState();
+            },
+            this
+        );
+
+        // Setup platform collision with callback to track when player lands on platform
+        this.physics.add.collider(
+            this.player.getSprite(),
+            this.platformSpawner.platformsGroup,
+            this.handlePlatformCollision,
+            (_playerSprite: any, _platformSprite: any) => {
+                // Process callback: skip collision if player is sliding
+                return !this.player.isSlidingState();
+            },
             this
         );
 
         // Setup UI
         this.setupUI();
+        
+        // Setup screen flash overlay (initially invisible)
+        this.flashOverlay = this.add.rectangle(960, 540, 1920, 1080, 0xff0000, 0);
+        this.flashOverlay.setDepth(1000); // Above everything
+        this.flashOverlay.setScrollFactor(0); // Don't scroll with camera
+        this.flashOverlay.setVisible(false);
 
         // Reset game state
         this.distance = 0;
         this.score = 0;
+        this.lastDistanceScore = 0;
         this.laserSpawnTimer = 0;
         this.lasers = [];
+        this.laserHitCooldowns.clear(); // Clear hit cooldowns
         this.isPaused = false;
 
         // Setup pause functionality
@@ -152,9 +194,17 @@ export class Game extends Scene
         this.distance += (this.scrollSpeed * delta) / 1000;
         this.distanceText.setText(`Distance: ${Math.floor(this.distance)}m`);
         
-        // Update score (based on distance)
-        this.score = Math.floor(this.distance);
-        this.scoreText.setText(`Score: ${this.score}`);
+        // Update score (increases at 0.25x the rate of distance)
+        // Score increases with distance, but laser hits deduct from it
+        const distanceScore = Math.floor(this.distance);
+        const distanceIncrease = distanceScore - this.lastDistanceScore;
+        if (distanceIncrease > 0) {
+            // Score increases at 0.25x the rate of distance
+            const scoreIncrease = distanceIncrease * 0.25;
+            this.score += scoreIncrease;
+            this.lastDistanceScore = distanceScore;
+        }
+        this.scoreText.setText(`Score: ${Math.floor(this.score)}`);
 
         // Update laser spawning
         this.updatelaserSpawning(delta);
@@ -164,35 +214,104 @@ export class Game extends Scene
 
         // Update diamond spawner
         this.diamondSpawner.update(delta, this.distance);
+
+        // Update platform spawner
+        this.platformSpawner.update(delta, this.distance);
+        
+        // Add diamonds from platforms to diamond collision group
+        this.updatePlatformDiamonds();
+        
+        // Update screen flash effect
+        this.updateFlashEffect(delta);
+        
+        // Update laser hit cooldowns
+        this.updateLaserHitCooldowns(delta);
     }
+    
+    private updateLaserHitCooldowns(delta: number): void {
+        // Decrease cooldown timers for all lasers
+        for (const [laserSprite, cooldown] of this.laserHitCooldowns.entries()) {
+            const newCooldown = cooldown - delta;
+            if (newCooldown <= 0) {
+                this.laserHitCooldowns.delete(laserSprite);
+            } else {
+                this.laserHitCooldowns.set(laserSprite, newCooldown);
+            }
+        }
+    }
+    
+    private updatePlatformDiamonds(): void {
+        // Get all platforms and add their diamonds to the diamond group
+        if (!this.platformSpawner || !this.diamondSpawner) {
+            return;
+        }
+        
+        try {
+            const platforms = this.platformSpawner.getPlatforms();
+            if (platforms) {
+                platforms.forEach((platform: SoftPlatform) => {
+                    if (platform && platform.diamond && platform.diamond.sprite) {
+                        if (!this.diamondSpawner.diamondsGroup.contains(platform.diamond.sprite)) {
+                            this.diamondSpawner.diamondsGroup.add(platform.diamond.sprite);
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error updating platform diamonds:', error);
+        }
+    }
+
 
     private updatelaserSpawning(delta: number): void {
         this.laserSpawnTimer += delta;
 
         if (this.laserSpawnTimer >= this.laserSpawnInterval) {
-            this.spawnLaser();
-            this.laserSpawnTimer = 0;
-
-            // Gradually increase difficulty
-            if (this.laserSpawnInterval > 1000) {
-                this.laserSpawnInterval -= 50; // Spawn more frequently over time
+            // Random chance to spawn laser (not always)
+            if (Math.random() < this.LASER_SPAWN_CHANCE) {
+                this.spawnLaser();
             }
+            this.laserSpawnTimer = 0;
         }
     }
 
     private spawnLaser(): void {
-        // Only spawn ground lasers since sliding is removed
+        // Get possible Y positions: ground diamond position and platform diamond positions
+        const possibleYPositions: number[] = [];
+        
+        // Ground diamond position
+        possibleYPositions.push(this.GROUND_Y - 15);
+        
+        // Get active platform diamond positions
+        const platforms = this.platformSpawner.getPlatforms();
+        platforms.forEach((platform: SoftPlatform) => {
+            if (platform.diamond && platform.diamond.sprite) {
+                // Get actual diamond Y position from its sprite
+                const diamondY = platform.diamond.sprite.y;
+                possibleYPositions.push(diamondY);
+            }
+        });
+        
+        // Randomly select one of the possible Y positions
+        if (possibleYPositions.length === 0) {
+            // Fallback to ground position if no platforms with diamonds
+            possibleYPositions.push(this.GROUND_Y - 15);
+        }
+        
+        const selectedY = possibleYPositions[Math.floor(Math.random() * possibleYPositions.length)];
+        
+        // Laser constructor expects groundY, and sets y = groundY - 15 for 'ground' height
+        // So to get laser at selectedY, we need to pass selectedY + 15 as groundY
         const height: LaserHeight = 'ground';
-
         const x = 2000; // Spawn off-screen to the right
 
-        const laser = new Laser(this, x, this.GROUND_Y, height, this.scrollSpeed);
+        const laser = new Laser(this, x, selectedY + 15, height, this.scrollSpeed);
         this.lasers.push(laser);
 
         // Add to collision group
         this.collisionGroup.add(laser.sprite);
 
-        console.log(`Spawned ${height} laser at x=${x}`);
+        console.log(`Spawned ${height} laser at x=${x}, y=${selectedY} (diamond position)`);
     }
 
     private updateLasers(delta: number): void {
@@ -209,11 +328,78 @@ export class Game extends Scene
         }
     }
 
-    private handleLaserCollision(): void {
-        console.log('COLLISION DETECTED!');
-        // TODO: Trigger QTE system
-        // For now, just log and continue
-        // In Phase 2, this will pause game and show QTE overlay
+    private handleLaserCollision(playerSprite: any, laserSprite: any): void {
+        // Process callback already checks if laser is active, but double-check here
+        const laser = this.lasers.find(l => l.sprite === laserSprite);
+        if (!laser || !laser.getIsActive()) {
+            // Laser is not active, don't trigger hit
+            return;
+        }
+        
+        // Check if this laser is on cooldown
+        const currentCooldown = this.laserHitCooldowns.get(laserSprite);
+        if (currentCooldown && currentCooldown > 0) {
+            // Still on cooldown, skip this hit
+            return;
+        }
+        
+        // Set cooldown for this laser
+        this.laserHitCooldowns.set(laserSprite, this.LASER_HIT_COOLDOWN);
+        
+        console.log('LASER HIT DETECTED!', playerSprite, laserSprite);
+        
+        // Reduce score by half (works even for low scores like 10 -> 5)
+        const oldScore = this.score;
+        this.score = Math.max(0, Math.floor(this.score / 2)); // Don't go below 0
+        this.scoreText.setText(`Score: ${this.score}`);
+        
+        // Flash screen red
+        this.flashScreen();
+        
+        console.log(`Score reduced from ${oldScore} to ${this.score}`);
+    }
+    
+    private flashScreen(): void {
+        // Show red flash overlay
+        this.flashOverlay.setVisible(true);
+        this.flashOverlay.setAlpha(0.3); // Light red flash (30% opacity)
+        this.flashTimer = this.FLASH_DURATION;
+    }
+    
+    private updateFlashEffect(delta: number): void {
+        if (this.flashTimer > 0) {
+            this.flashTimer -= delta;
+            
+            // Fade out the flash
+            const alpha = Math.max(0, (this.flashTimer / this.FLASH_DURATION) * 0.3);
+            this.flashOverlay.setAlpha(alpha);
+            
+            // Hide when timer expires
+            if (this.flashTimer <= 0) {
+                this.flashOverlay.setVisible(false);
+                this.flashOverlay.setAlpha(0);
+            }
+        }
+    }
+    
+    private handlePlatformCollision(
+        playerSprite: any,
+        platformSprite: any
+    ): void {
+        const playerBody = (playerSprite as Phaser.Physics.Arcade.Sprite).body as Phaser.Physics.Arcade.Body;
+        const platformBody = (platformSprite as Phaser.Physics.Arcade.Sprite).body as Phaser.Physics.Arcade.Body;
+        
+        // Check if player is landing on top of platform (touching from above)
+        if (playerBody && platformBody && playerBody.touching.down) {
+            // Check if player's bottom is near platform's top
+            const playerBottom = playerBody.y + playerBody.height / 2;
+            const platformTop = platformBody.y - platformBody.height / 2;
+            
+            if (playerBottom >= platformTop - 10 && playerBottom <= platformTop + 10) {
+                // Player is landing on platform
+                this.player.setOnPlatform(platformSprite as Phaser.Physics.Arcade.Sprite);
+            }
+        }
     }
 
     private handleDiamondCollision(_player: any, diamondSprite: any): void {

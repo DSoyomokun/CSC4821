@@ -22,7 +22,7 @@ const config: Phaser.Types.Core.GameConfig = {
         default: 'arcade',
         arcade: {
             gravity: { x: 0, y: 1200 }, // Vertical gravity for jump arc
-            debug: true // Enable physics debug visuals
+            debug: false // Disable physics debug visuals
         }
     },
     scene: [
