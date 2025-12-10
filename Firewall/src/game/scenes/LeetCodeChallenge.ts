@@ -989,7 +989,27 @@ export class LeetCodeChallenge extends Scene {
             let body = '';
 
             // Find the minimum indentation level (to handle any indentation style)
-            const nonEmptyLines = lines.filter(line => line.trim().length > 0 && !line.trim().startsWith('#'));
+            // Filter out empty lines, comments, and docstrings when calculating min indent
+            let skipDocstringForIndent = false;
+            const nonEmptyLines = lines.filter(line => {
+                const trimmed = line.trim();
+                if (trimmed === '' || trimmed.startsWith('#')) return false;
+
+                // Skip docstrings
+                if (trimmed.startsWith('"""') || trimmed.startsWith("'''")) {
+                    const delimiter = trimmed.substring(0, 3);
+                    if (trimmed.endsWith(delimiter) && trimmed.length > 6) {
+                        // Single-line docstring
+                        return false;
+                    }
+                    skipDocstringForIndent = !skipDocstringForIndent;
+                    return false;
+                }
+                if (skipDocstringForIndent) return false;
+
+                return true;
+            });
+
             const minIndent = nonEmptyLines.length > 0
                 ? Math.min(...nonEmptyLines.map(line => {
                     const match = line.match(/^(\s*)/);
@@ -1000,14 +1020,43 @@ export class LeetCodeChallenge extends Scene {
             // Track indentation levels to properly close blocks
             let lastIndentLevel = 0;
             const indentStack: number[] = [0];
+            let inDocstring = false;
+            let docstringDelimiter = '';
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
+                const trimmed = line.trim();
 
-                if (line.trim() === '' || line.trim().startsWith('#')) continue;
+                // Skip empty lines and comments
+                if (trimmed === '' || trimmed.startsWith('#')) continue;
+
+                // If we're already in a docstring, check if this line ends it
+                if (inDocstring) {
+                    if (trimmed === docstringDelimiter || trimmed.endsWith(docstringDelimiter)) {
+                        inDocstring = false;
+                        docstringDelimiter = '';
+                    }
+                    continue;
+                }
+
+                // Handle docstrings (both """ and ''')
+                if (trimmed.startsWith('"""') || trimmed.startsWith("'''")) {
+                    const delimiter = trimmed.substring(0, 3);
+
+                    // Check if it's a single-line docstring
+                    if (trimmed.length > 3 && trimmed.endsWith(delimiter) && trimmed.length > 6) {
+                        // Single-line docstring, skip it
+                        continue;
+                    } else {
+                        // Multi-line docstring starts
+                        inDocstring = true;
+                        docstringDelimiter = delimiter;
+                        continue;
+                    }
+                }
 
                 // Skip pass statements
-                if (line.trim() === 'pass') continue;
+                if (trimmed === 'pass') continue;
 
                 // Calculate current indentation level
                 const currentIndent = line.match(/^(\s*)/)?.[1].length || 0;
