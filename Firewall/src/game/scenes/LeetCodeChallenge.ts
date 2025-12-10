@@ -7,6 +7,8 @@ export class LeetCodeChallenge extends Scene {
     private distanceTraveled!: number;
     private editor!: monaco.editor.IStandaloneCodeEditor;
     private editorContainer!: HTMLElement;
+    private failedAttempts: number = 0;
+    private readonly MAX_ATTEMPTS: number = 3;
 
     constructor() {
         super('LeetCodeChallenge');
@@ -15,6 +17,7 @@ export class LeetCodeChallenge extends Scene {
     create(data: { problem: LeetCodeProblem, distanceTraveled: number }) {
         this.problem = data.problem;
         this.distanceTraveled = data.distanceTraveled;
+        this.failedAttempts = 0; // Reset attempts for each new challenge
 
         console.log('LeetCodeChallenge launched with problem:', this.problem);
 
@@ -638,7 +641,19 @@ export class LeetCodeChallenge extends Scene {
                     this.closeChallenge();
                 });
             } else {
-                this.showTestResults(results, true);
+                // Failed submission - increment counter
+                this.failedAttempts++;
+                const attemptsRemaining = this.MAX_ATTEMPTS - this.failedAttempts;
+
+                console.log(`Failed attempt ${this.failedAttempts}/${this.MAX_ATTEMPTS}`);
+
+                if (this.failedAttempts >= this.MAX_ATTEMPTS) {
+                    // Game Over - 3 strikes
+                    this.triggerGameOver();
+                } else {
+                    // Show test results with attempts remaining
+                    this.showTestResults(results, true, attemptsRemaining);
+                }
             }
         } catch (error) {
             this.showError(error instanceof Error ? error.message : 'Failed to compile code');
@@ -940,7 +955,7 @@ export class LeetCodeChallenge extends Scene {
         }
     }
 
-    private showTestResults(results: TestResult[], isSubmission: boolean = false) {
+    private showTestResults(results: TestResult[], isSubmission: boolean = false, attemptsRemaining?: number) {
         // Hide Monaco editor so overlay appears on top
         if (this.editorContainer) {
             this.editorContainer.style.display = 'none';
@@ -991,6 +1006,21 @@ export class LeetCodeChallenge extends Scene {
         });
         stats.setOrigin(0.5);
         resultsOverlay.add(stats);
+
+        // Show attempts remaining warning if submission failed
+        if (isSubmission && attemptsRemaining !== undefined && attemptsRemaining > 0) {
+            const warningText = this.add.text(0, -110,
+                `⚠️ ATTEMPTS REMAINING: ${attemptsRemaining}/${this.MAX_ATTEMPTS}`, {
+                fontSize: '18px',
+                color: '#ff0000',
+                fontFamily: 'Courier New, monospace',
+                fontStyle: 'bold',
+                stroke: '#ff0000',
+                strokeThickness: 1
+            });
+            warningText.setOrigin(0.5);
+            resultsOverlay.add(warningText);
+        }
 
         // Show individual test results (first 5)
         let yOffset = -80;
@@ -1188,6 +1218,31 @@ export class LeetCodeChallenge extends Scene {
             duration: 300,
             ease: 'Back.easeOut'
         });
+    }
+
+    private triggerGameOver() {
+        console.log('=== GAME OVER - 3 FAILED ATTEMPTS ===');
+
+        // Immediately hide Monaco editor
+        if (this.editorContainer) {
+            this.editorContainer.style.display = 'none';
+        }
+
+        // Clean up Monaco editor
+        if (this.editor) {
+            this.editor.dispose();
+        }
+        if (this.editorContainer && this.editorContainer.parentNode) {
+            this.editorContainer.parentNode.removeChild(this.editorContainer);
+        }
+
+        // Remove resize listener
+        this.scale.off('resize', this.handleResize, this);
+
+        // Stop the Game scene and start GameOver scene
+        this.scene.stop('Game');
+        this.scene.stop(); // Stop LeetCodeChallenge scene
+        this.scene.start('GameOver');
     }
 
     private closeChallenge() {
